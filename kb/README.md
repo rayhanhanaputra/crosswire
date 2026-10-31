@@ -34,7 +34,34 @@ counts by channel, intent, and status.
 Each entry declares one of two maturity levels:
 
 - `documented` — described with a threat model and a falsifiable success condition.
-- `reproduced` — demonstrated at least once in a controlled lab or authorized target.
+- `reproduced` — backed by a stored Crosswire run bundle (`bundle:` path under
+  `kb/bundles/`) whose verdict is `confirmed` or `observed` through a real, not
+  modeled, channel. `tools/build_registry.py --check` fails otherwise.
+
+Until 2026-10-31 every entry claimed `reproduced` while nothing in the repository
+could re-run it. All entries were reset to `documented`; status now follows evidence.
+
+## What counts as a physical channel
+
+An entry belongs in the physical corpus when the attacker-controlled content reaches
+the agent through something the agent *perceives* — a microphone, a camera, a device
+discovery list, a document scan — rather than through a chat message. Entries whose
+only difference from chat injection is a JSON key name are kept for completeness
+(`webapp`, `inter-agent`, `rag` tags) but are not the project's claim. Two entries
+record **channel-capacity negative results** (`capacity-limit` tag): Morse over an
+LED and DTMF tones. They exist to show which channels cannot carry an instruction.
+
+## Reference scenarios
+
+Crosswire ships a real tool-calling LLM target for each of these; see
+`crosswire/docs/CONTRACT.md` §6.
+
+| Entry    | Target          | Channel adapter | Privileged tool            |
+| -------- | --------------- | --------------- | -------------------------- |
+| AAT-0011 | `home-agent`    | `device-name`   | `unlock_door`, `disarm_alarm` |
+| AAT-0012 | `voice-agent`   | `speech`        | `send_email`, `transfer_funds` |
+| AAT-0013 | `camera-agent`  | `sign`, `qr`    | `mark_clear`, `disarm_alarm` |
+| AAT-0014 | `expense-agent` | `invoice`       | `approve_payment`          |
 
 ## Adding a technique
 

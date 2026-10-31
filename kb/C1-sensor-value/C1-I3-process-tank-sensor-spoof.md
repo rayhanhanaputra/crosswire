@@ -23,9 +23,9 @@ mappings:
   mitre-atlas:      []
   mitre-attack-ics: [T1692.002, T0880]
 tags:        [sensor-value, industrial, safety-limit, unsafe-actuation]
-status:      reproduced
+status:      documented
 added:       2026-09-17
-updated:     2026-09-17
+updated:     2026-10-31
 references:
   - "OWASP, Top 10 for LLM Applications: Excessive Agency (LLM06), https://genai.owasp.org, 2025"
 ---

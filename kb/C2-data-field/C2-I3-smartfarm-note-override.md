@@ -20,9 +20,9 @@ mappings:
   mitre-atlas:      [AML.T0051.001]
   mitre-attack-ics: [T0831, T0880]
 tags:        [mqtt, iot, agriculture, data-field, safety-limit, unsafe-actuation]
-status:      reproduced
+status:      documented
 added:       2026-09-17
-updated:     2026-09-17
+updated:     2026-10-31
 references:
   - "OWASP, Top 10 for LLM Applications: Prompt Injection (LLM01), https://genai.owasp.org, 2025"
   - "OWASP, Top 10 for LLM Applications: Excessive Agency (LLM06), https://genai.owasp.org, 2025"

@@ -21,9 +21,9 @@ mappings:
   owasp-agentic: [T02-tool-misuse, T06-intent-breaking, T03-privilege-compromise, T12-agent-communication-poisoning, T01-memory-poisoning]
   mitre-atlas:   [AML.T0051.001, AML.T0070]
 tags:        [inter-agent, rag, support-desk]
-status:      reproduced
+status:      documented
 added:       2026-09-17
-updated:     2026-09-17
+updated:     2026-10-31
 references:
   - "OWASP, Top 10 for LLM Applications: Prompt Injection (LLM01), https://genai.owasp.org, 2025"
   - "OWASP, Top 10 for LLM Applications: Vector and Embedding Weaknesses (LLM08), https://genai.owasp.org, 2025"

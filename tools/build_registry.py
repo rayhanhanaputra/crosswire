@@ -114,6 +114,38 @@ def validate(fm: dict, path: Path, vocab: dict,
     mappings = fm.get("mappings") or {}
     if not any(mappings.get(s) for s in ("owasp-llm", "owasp-agentic", "mitre-atlas", "mitre-attack-ics")):
         errors.append(f"{rel}: at least one non-empty framework mapping is required")
+    if fm.get("status") == "reproduced":
+        validate_bundle(fm, rel, errors)
+
+
+def validate_bundle(fm: dict, rel: Path, errors: list[str]) -> None:
+    """A 'reproduced' claim must point at a stored Crosswire run bundle.
+
+    The bundle is the evidence: run.json with a verdict of confirmed or observed,
+    produced through a real (not modeled) channel. Front matter alone proves nothing;
+    before this check every entry claimed 'reproduced' while nothing could rerun it.
+    """
+    bundle = fm.get("bundle")
+    if not bundle:
+        errors.append(f"{rel}: status 'reproduced' requires a 'bundle' path under kb/bundles/")
+        return
+    path = ROOT / str(bundle)
+    run_json = path / "run.json" if path.is_dir() else None
+    if run_json is None or not run_json.exists():
+        errors.append(f"{rel}: bundle '{bundle}' has no run.json")
+        return
+    try:
+        run = json.loads(run_json.read_text())
+    except json.JSONDecodeError as exc:
+        errors.append(f"{rel}: bundle run.json is not valid JSON ({exc})")
+        return
+    outcome = (run.get("verdict") or {}).get("outcome")
+    if outcome not in ("confirmed", "observed"):
+        errors.append(f"{rel}: bundle verdict is '{outcome}', not confirmed/observed")
+    if (run.get("channel") or {}).get("modeled"):
+        errors.append(f"{rel}: bundle used a modeled channel; modeled runs cannot reproduce an entry")
+
+
 def build() -> tuple[list[dict], list[str]]:
     vocab = {
         "owasp-llm": load_vocab("owasp-llm.yaml"),
@@ -141,6 +173,7 @@ def build() -> tuple[list[dict], list[str]]:
             "effect": fm.get("effect"),
             "severity": fm.get("severity"),
             "status": fm.get("status"),
+            "bundle": fm.get("bundle"),
             "path": str(path.relative_to(ROOT)),
             "mappings": fm.get("mappings", {}),
             "tags": fm.get("tags", []),

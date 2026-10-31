@@ -47,6 +47,10 @@ ids:
   flooding:    Flooding the input stream
   control:     Targets a control loop
   hvac:        HVAC / climate control domain
+  finance:     Payments / accounts-payable domain
+  document:    Injection carried in a scanned or photographed document
+  capacity-limit: Records a channel's capacity bound (a negative result)
+  guardrail-bypass: The injection path skips an input guardrail by construction
   # effects
   safety-limit: Violates a configured safety limit
   unsafe-actuation: Drives an actuator to an unsafe state

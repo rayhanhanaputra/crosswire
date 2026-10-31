@@ -21,9 +21,9 @@ mappings:
   mitre-atlas:      [AML.T0051.001]
   mitre-attack-ics: [T1692.001, T0831]
 tags:        [relay, morse, binary, iot, actuator, physical-access, unsafe-actuation]
-status:      reproduced
+status:      documented
 added:       2026-09-17
-updated:     2026-09-17
+updated:     2026-10-31
 references:
   - "OWASP, Top 10 for LLM Applications: Excessive Agency (LLM06), https://genai.owasp.org, 2025"
 ---

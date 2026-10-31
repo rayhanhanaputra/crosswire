@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crosswire</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <h1>Crosswire <span class="tagline">&mdash; signal-to-prompt injection workbench</span></h1>
+  <p class="meta"><span id="ver">version ...</span><span id="datadir"></span></p>
+</header>
+<nav class="tabs" role="tablist" aria-label="Workbench">
+  <button role="tab" id="tab-btn-targets" aria-controls="tab-targets" data-tab="targets">Targets</button>
+  <button role="tab" id="tab-btn-repeater" aria-controls="tab-repeater" data-tab="repeater">Repeater</button>
+  <button role="tab" id="tab-btn-intruder" aria-controls="tab-intruder" data-tab="intruder">Intruder</button>
+  <button role="tab" id="tab-btn-history" aria-controls="tab-history" data-tab="history">History</button>
+  <button role="tab" id="tab-btn-sink" aria-controls="tab-sink" data-tab="sink">Sink</button>
+</nav>
+<main>
+  <section id="tab-targets" role="tabpanel" aria-labelledby="tab-btn-targets" hidden></section>
+  <section id="tab-repeater" role="tabpanel" aria-labelledby="tab-btn-repeater" hidden></section>
+  <section id="tab-intruder" role="tabpanel" aria-labelledby="tab-btn-intruder" hidden></section>
+  <section id="tab-history" role="tabpanel" aria-labelledby="tab-btn-history" hidden></section>
+  <section id="tab-sink" role="tabpanel" aria-labelledby="tab-btn-sink" hidden></section>
+</main>
+<footer>Use only against systems you own or are authorized to test.</footer>
+<div id="toasts" role="status" aria-live="polite"></div>
+<div id="modal-root"></div>
+<script src="app.js"></script>
+</body>
+</html>

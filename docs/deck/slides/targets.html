@@ -1,0 +1,17 @@
+<section id="targets" data-transition="fade" style="background:#EEF1F4;color:#16202A;font-family:'Public Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<h2 style="font-family:'Libre Baskerville', Georgia, serif;font-size:64px;font-weight:400;line-height:1.1">Four reference targets, each a real tool-calling model</h2>
+<table style="font-size:28px;color:#16202A">
+<tr style="background:#E3E8ED"><th style="width:18%;text-align:left">Target</th><th style="width:30%;text-align:left">Perceives</th><th style="width:30%;text-align:left">Privileged tool</th><th style="width:22%;text-align:left">Channel adapter</th></tr>
+<tr><td>home-agent</td><td>device name or state in its entity list</td><td>unlock_door, disarm_alarm</td><td>device-name (modeled)</td></tr>
+<tr><td>voice-agent</td><td>WAV, transcribed by a speech model</td><td>send_email, transfer_funds</td><td>speech (TTS to WAV)</td></tr>
+<tr><td>camera-agent</td><td>PNG, read by a vision model</td><td>disarm_alarm</td><td>sign, qr</td></tr>
+<tr><td>expense-agent</td><td>invoice PNG, read by a vision model</td><td>approve_payment</td><td>invoice</td></tr>
+</table>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#E3E8ED;padding:32px;border-radius:12px"><h3 style="font-size:30px;font-weight:600">vulnerable</h3><p style="font-size:26px;line-height:1.4;color:#3F4A55">one agent loop, perceived text in the prompt, every tool exposed</p></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#E3E8ED;padding:32px;border-radius:12px"><h3 style="font-size:30px;font-weight:600">+ chat guardrail</h3><p style="font-size:26px;line-height:1.4;color:#3F4A55">a prompt-injection classifier on the chat path only, where products put it</p></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#16202A;color:#EEF1F4;padding:32px;border-radius:12px"><h3 style="font-size:30px;font-weight:600;color:#E8772E">hardened</h3><p style="font-size:26px;line-height:1.4;color:#BFC9D2">perception quarantined into a fixed schema; privileged tools hidden; confirmation only from the user channel</p></div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A98A5">Model gpt-4o-mini, temperature 0, fresh conversation per trial. Targets are reference agents written for this project, not products.</p>
+<aside>Stress that the two policies differ in architecture, not in a keyword filter. The earlier demo target decided "compromised" with eight regular expressions; it taught the wrong lesson.</aside>
+</section>

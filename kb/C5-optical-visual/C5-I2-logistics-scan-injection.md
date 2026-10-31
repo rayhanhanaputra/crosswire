@@ -20,9 +20,9 @@ mappings:
   owasp-agentic: [T02-tool-misuse, T06-intent-breaking]
   mitre-atlas:   [AML.T0051.001]
 tags:        [qr, ocr, optical, vision, logistics]
-status:      reproduced
+status:      documented
 added:       2026-09-17
-updated:     2026-09-17
+updated:     2026-10-31
 references:
   - "OWASP, Top 10 for LLM Applications: Prompt Injection (LLM01), https://genai.owasp.org, 2025"
 ---

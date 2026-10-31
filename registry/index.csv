@@ -1,11 +1,17 @@
 registry_id,id,title,channel,intent,effect,severity,status,path
-AAT-0001,C2-I3-smartfarm-note-override,Smart-Farm Irrigation Note-Field Override,C2,I3|I2,cyber-physical,high,reproduced,kb/C2-data-field/C2-I3-smartfarm-note-override.md
-AAT-0002,C4-I4-callcenter-voice-override,Call-Center Voice Instruction Override,C4,I4|I1|I2,digital,high,reproduced,kb/C4-voice-dtmf/C4-I4-callcenter-voice-override.md
-AAT-0003,C3-I2-facility-morse-actuation,Facility Relay Morse / Binary Actuation,C3,I2|I1,cyber-physical,critical,reproduced,kb/C3-actuator-state/C3-I2-facility-morse-actuation.md
-AAT-0004,C5-I2-logistics-scan-injection,Logistics Scan QR / OCR Injection,C5,I2|I1,cyber-physical,high,reproduced,kb/C5-optical-visual/C5-I2-logistics-scan-injection.md
-AAT-0005,C7-I2-supportdesk-inter-agent-injection,Support-Desk Inter-Agent / RAG Injection,C7,I2|I1,digital,high,reproduced,kb/C7-indirect-inter-agent/C7-I2-supportdesk-inter-agent-injection.md
-AAT-0006,C6-I2-smarthome-rf-access,Smart-Home RF (BLE / NFC) Access Injection,C6,I2|I1,cyber-physical,critical,reproduced,kb/C6-rf-protocol/C6-I2-smarthome-rf-access.md
-AAT-0007,C8-I3-hvac-replay-flood,HVAC Control-Loop Replay / Flood,C8,I3|I5,cyber-physical,high,reproduced,kb/C8-feedback-loop/C8-I3-hvac-replay-flood.md
-AAT-0008,C1-I3-process-tank-sensor-spoof,Industrial Tank Sensor-Value Spoof,C1,I3,cyber-physical,high,reproduced,kb/C1-sensor-value/C1-I3-process-tank-sensor-spoof.md
-AAT-0009,C2-I4-webapp-prompt-injection,Web-App Prompt Injection (running-target),C2,I4|I1,digital,high,reproduced,kb/C2-data-field/C2-I4-webapp-prompt-injection.md
-AAT-0010,C7-I6-supportdesk-memory-poisoning,Support-Desk Persistent Memory Poisoning,C7,I6|I2,digital,high,reproduced,kb/C7-indirect-inter-agent/C7-I6-supportdesk-memory-poisoning.md
+AAT-0001,C2-I3-smartfarm-note-override,Smart-Farm Irrigation Note-Field Override,C2,I3|I2,cyber-physical,high,documented,kb/C2-data-field/C2-I3-smartfarm-note-override.md
+AAT-0002,C4-I4-callcenter-voice-override,Call-Center Voice Instruction Override,C4,I4|I1|I2,digital,high,documented,kb/C4-voice-dtmf/C4-I4-callcenter-voice-override.md
+AAT-0003,C3-I2-facility-morse-actuation,Facility Relay Morse / Binary Actuation,C3,I2|I1,cyber-physical,critical,documented,kb/C3-actuator-state/C3-I2-facility-morse-actuation.md
+AAT-0004,C5-I2-logistics-scan-injection,Logistics Scan QR / OCR Injection,C5,I2|I1,cyber-physical,high,documented,kb/C5-optical-visual/C5-I2-logistics-scan-injection.md
+AAT-0005,C7-I2-supportdesk-inter-agent-injection,Support-Desk Inter-Agent / RAG Injection,C7,I2|I1,digital,high,documented,kb/C7-indirect-inter-agent/C7-I2-supportdesk-inter-agent-injection.md
+AAT-0006,C6-I2-smarthome-rf-access,Smart-Home RF (BLE / NFC) Access Injection,C6,I2|I1,cyber-physical,critical,documented,kb/C6-rf-protocol/C6-I2-smarthome-rf-access.md
+AAT-0007,C8-I3-hvac-replay-flood,HVAC Control-Loop Replay / Flood,C8,I3|I5,cyber-physical,high,documented,kb/C8-feedback-loop/C8-I3-hvac-replay-flood.md
+AAT-0008,C1-I3-process-tank-sensor-spoof,Industrial Tank Sensor-Value Spoof,C1,I3,cyber-physical,high,documented,kb/C1-sensor-value/C1-I3-process-tank-sensor-spoof.md
+AAT-0009,C2-I4-webapp-prompt-injection,Web-App Prompt Injection (running-target),C2,I4|I1,digital,high,documented,kb/C2-data-field/C2-I4-webapp-prompt-injection.md
+AAT-0010,C7-I6-supportdesk-memory-poisoning,Support-Desk Persistent Memory Poisoning,C7,I6|I2,digital,high,documented,kb/C7-indirect-inter-agent/C7-I6-supportdesk-memory-poisoning.md
+AAT-0011,C6-I2-home-device-name-unlock,Device Name as Trusted Context in a Home Assistant,C6,I2|I1,cyber-physical,critical,documented,kb/C6-rf-protocol/C6-I2-home-device-name-unlock.md
+AAT-0012,C4-I4-voice-background-speaker-exfil,Spoken Instruction from a Nearby Speaker to a Voice Assistant,C4,I4|I2,digital,high,reproduced,kb/C4-voice-dtmf/C4-I4-voice-background-speaker-exfil.md
+AAT-0013,C5-I2-camera-sign-mark-clear,Printed Sign in Frame Clears a Camera Agent,C5,I2|I1,cyber-physical,high,reproduced,kb/C5-optical-visual/C5-I2-camera-sign-mark-clear.md
+AAT-0014,C5-I2-invoice-note-payment-redirect,Invoice Note Redirects a Payment Agent,C5,I2|I4,digital,high,documented,kb/C5-optical-visual/C5-I2-invoice-note-payment-redirect.md
+AAT-0015,C3-I1-morse-led-channel-capacity,Morse over an LED — a Channel-Capacity Negative Result,C3,I1,cyber-physical,low,documented,kb/C3-actuator-state/C3-I1-morse-led-channel-capacity.md
+AAT-0016,C4-I2-dtmf-channel-capacity,"DTMF Tones — Sixteen Symbols, No Language",C4,I2,digital,medium,documented,kb/C4-voice-dtmf/C4-I2-dtmf-channel-capacity.md

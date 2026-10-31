@@ -19,9 +19,9 @@ mappings:
   owasp-agentic: [T02-tool-misuse, T06-intent-breaking, T09-identity-spoofing]
   mitre-atlas:   [AML.T0051.000]
 tags:        [voice, dtmf, call-center, exfiltration]
-status:      reproduced
+status:      documented
 added:       2026-09-17
-updated:     2026-09-17
+updated:     2026-10-31
 references:
   - "OWASP, Top 10 for LLM Applications: Prompt Injection (LLM01), https://genai.owasp.org, 2025"
   - "OWASP, Top 10 for LLM Applications: Sensitive Information Disclosure (LLM02), https://genai.owasp.org, 2025"

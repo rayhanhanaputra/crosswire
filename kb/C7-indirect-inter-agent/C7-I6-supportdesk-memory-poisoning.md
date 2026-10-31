@@ -20,9 +20,9 @@ mappings:
   owasp-agentic: [T01-memory-poisoning, T02-tool-misuse]
   mitre-atlas:   [AML.T0070, AML.T0051.001]
 tags:        [inter-agent, rag, support-desk, persistence]
-status:      reproduced
+status:      documented
 added:       2026-09-18
-updated:     2026-09-18
+updated:     2026-10-31
 references:
   - "OWASP, Agentic AI Threats and Mitigations: Memory Poisoning (T1), https://genai.owasp.org, 2025"
   - "OWASP, Top 10 for LLM Applications: Vector and Embedding Weaknesses (LLM08), https://genai.owasp.org, 2025"

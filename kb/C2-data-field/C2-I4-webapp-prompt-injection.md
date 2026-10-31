@@ -18,9 +18,9 @@ mappings:
   owasp-agentic: [T06-intent-breaking]
   mitre-atlas:   [AML.T0051.000]
 tags:        [webapp, http, tcp, exfiltration]
-status:      reproduced
+status:      documented
 added:       2026-09-18
-updated:     2026-09-18
+updated:     2026-10-31
 references:
   - "OWASP, Top 10 for LLM Applications: Prompt Injection (LLM01), https://genai.owasp.org, 2025"
 ---

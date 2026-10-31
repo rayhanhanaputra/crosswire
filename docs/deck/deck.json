@@ -1,0 +1,18 @@
+{
+  "v": 4,
+  "createdOnFiles": {"v": 1, "at": "2026-10-31T09:10:00Z"},
+  "lists": "css",
+  "title": "Crosswire: Signal-to-Prompt Injection",
+  "order": ["cover", "claim", "prior", "method", "targets", "results", "gap", "control", "hardened", "delivery", "capacity", "tool", "limits", "defenses", "close"],
+  "sections": {
+    "s1": {"description": "The claim: the guardrail and the agent read different representations.", "start": "cover"},
+    "s2": {"description": "How it was measured: three arms, canaries, a sink, intervals.", "start": "method"},
+    "s3": {"description": "What the numbers showed, including the oracle the control arm caught.", "start": "results"},
+    "s4": {"description": "The tool, its limits, and what defenders should change.", "start": "tool"}
+  },
+  "faces": {
+    "libre-baskerville": {"family": "Libre Baskerville", "href": "https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap"},
+    "public-sans": {"family": "Public Sans", "href": "https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;600;700&display=swap"}
+  },
+  "designSystems": []
+}

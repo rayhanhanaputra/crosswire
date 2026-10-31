@@ -18,6 +18,7 @@ mappings:                                       # at least one non-empty mapping
   mitre-attack-ics: []                          # ids from mappings/mitre-attack-ics.yaml (cyber-physical)
 tags:        []                                 # ids from mappings/tags.yaml
 status:      documented                         # documented | reproduced
+# bundle:    kb/bundles/AAT-XXXX/               # required when status is reproduced
 added:       YYYY-MM-DD
 updated:     YYYY-MM-DD
 references:

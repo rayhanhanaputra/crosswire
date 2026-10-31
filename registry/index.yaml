@@ -9,7 +9,8 @@ techniques:
   - I2
   effect: cyber-physical
   severity: high
-  status: reproduced
+  status: documented
+  bundle: null
   path: kb/C2-data-field/C2-I3-smartfarm-note-override.md
   mappings:
     owasp-llm:
@@ -40,7 +41,8 @@ techniques:
   - I2
   effect: digital
   severity: high
-  status: reproduced
+  status: documented
+  bundle: null
   path: kb/C4-voice-dtmf/C4-I4-callcenter-voice-override.md
   mappings:
     owasp-llm:
@@ -66,7 +68,8 @@ techniques:
   - I1
   effect: cyber-physical
   severity: critical
-  status: reproduced
+  status: documented
+  bundle: null
   path: kb/C3-actuator-state/C3-I2-facility-morse-actuation.md
   mappings:
     owasp-llm:
@@ -98,7 +101,8 @@ techniques:
   - I1
   effect: cyber-physical
   severity: high
-  status: reproduced
+  status: documented
+  bundle: null
   path: kb/C5-optical-visual/C5-I2-logistics-scan-injection.md
   mappings:
     owasp-llm:
@@ -124,7 +128,8 @@ techniques:
   - I1
   effect: digital
   severity: high
-  status: reproduced
+  status: documented
+  bundle: null
   path: kb/C7-indirect-inter-agent/C7-I2-supportdesk-inter-agent-injection.md
   mappings:
     owasp-llm:
@@ -153,7 +158,8 @@ techniques:
   - I1
   effect: cyber-physical
   severity: critical
-  status: reproduced
+  status: documented
+  bundle: null
   path: kb/C6-rf-protocol/C6-I2-smarthome-rf-access.md
   mappings:
     owasp-llm:
@@ -183,7 +189,8 @@ techniques:
   - I5
   effect: cyber-physical
   severity: high
-  status: reproduced
+  status: documented
+  bundle: null
   path: kb/C8-feedback-loop/C8-I3-hvac-replay-flood.md
   mappings:
     owasp-llm:
@@ -212,7 +219,8 @@ techniques:
   - I3
   effect: cyber-physical
   severity: high
-  status: reproduced
+  status: documented
+  bundle: null
   path: kb/C1-sensor-value/C1-I3-process-tank-sensor-spoof.md
   mappings:
     owasp-llm:
@@ -238,7 +246,8 @@ techniques:
   - I1
   effect: digital
   severity: high
-  status: reproduced
+  status: documented
+  bundle: null
   path: kb/C2-data-field/C2-I4-webapp-prompt-injection.md
   mappings:
     owasp-llm:
@@ -262,7 +271,8 @@ techniques:
   - I2
   effect: digital
   severity: high
-  status: reproduced
+  status: documented
+  bundle: null
   path: kb/C7-indirect-inter-agent/C7-I6-supportdesk-memory-poisoning.md
   mappings:
     owasp-llm:
@@ -279,3 +289,161 @@ techniques:
   - rag
   - support-desk
   - persistence
+- registry_id: AAT-0011
+  id: C6-I2-home-device-name-unlock
+  title: Device Name as Trusted Context in a Home Assistant
+  channel: C6
+  intent:
+  - I2
+  - I1
+  effect: cyber-physical
+  severity: critical
+  status: documented
+  bundle: null
+  path: kb/C6-rf-protocol/C6-I2-home-device-name-unlock.md
+  mappings:
+    owasp-llm:
+    - LLM01-prompt-injection
+    - LLM06-excessive-agency
+    owasp-agentic:
+    - T06-intent-breaking
+    - T09-identity-spoofing
+    - T02-tool-misuse
+    mitre-atlas:
+    - AML.T0051.001
+    mitre-attack-ics: []
+  tags:
+  - ble
+  - smart-home
+  - physical-access
+  - guardrail-bypass
+- registry_id: AAT-0012
+  id: C4-I4-voice-background-speaker-exfil
+  title: Spoken Instruction from a Nearby Speaker to a Voice Assistant
+  channel: C4
+  intent:
+  - I4
+  - I2
+  effect: digital
+  severity: high
+  status: reproduced
+  bundle: kb/bundles/AAT-0012
+  path: kb/C4-voice-dtmf/C4-I4-voice-background-speaker-exfil.md
+  mappings:
+    owasp-llm:
+    - LLM01-prompt-injection
+    - LLM02-sensitive-information-disclosure
+    - LLM06-excessive-agency
+    owasp-agentic:
+    - T06-intent-breaking
+    - T02-tool-misuse
+    mitre-atlas:
+    - AML.T0051.001
+    mitre-attack-ics: []
+  tags:
+  - voice
+  - exfiltration
+  - guardrail-bypass
+- registry_id: AAT-0013
+  id: C5-I2-camera-sign-mark-clear
+  title: Printed Sign in Frame Clears a Camera Agent
+  channel: C5
+  intent:
+  - I2
+  - I1
+  effect: cyber-physical
+  severity: high
+  status: reproduced
+  bundle: kb/bundles/AAT-0013
+  path: kb/C5-optical-visual/C5-I2-camera-sign-mark-clear.md
+  mappings:
+    owasp-llm:
+    - LLM01-prompt-injection
+    - LLM06-excessive-agency
+    owasp-agentic:
+    - T06-intent-breaking
+    - T02-tool-misuse
+    mitre-atlas:
+    - AML.T0051.001
+    mitre-attack-ics: []
+  tags:
+  - optical
+  - vision
+  - ocr
+  - physical-access
+  - guardrail-bypass
+- registry_id: AAT-0014
+  id: C5-I2-invoice-note-payment-redirect
+  title: Invoice Note Redirects a Payment Agent
+  channel: C5
+  intent:
+  - I2
+  - I4
+  effect: digital
+  severity: high
+  status: documented
+  bundle: null
+  path: kb/C5-optical-visual/C5-I2-invoice-note-payment-redirect.md
+  mappings:
+    owasp-llm:
+    - LLM01-prompt-injection
+    - LLM06-excessive-agency
+    owasp-agentic:
+    - T06-intent-breaking
+    - T02-tool-misuse
+    mitre-atlas:
+    - AML.T0051.001
+    mitre-attack-ics: []
+  tags:
+  - optical
+  - vision
+  - ocr
+  - document
+  - finance
+- registry_id: AAT-0015
+  id: C3-I1-morse-led-channel-capacity
+  title: "Morse over an LED \u2014 a Channel-Capacity Negative Result"
+  channel: C3
+  intent:
+  - I1
+  effect: cyber-physical
+  severity: low
+  status: documented
+  bundle: null
+  path: kb/C3-actuator-state/C3-I1-morse-led-channel-capacity.md
+  mappings:
+    owasp-llm:
+    - LLM01-prompt-injection
+    owasp-agentic:
+    - T06-intent-breaking
+    mitre-atlas:
+    - AML.T0051.001
+    mitre-attack-ics: []
+  tags:
+  - morse
+  - relay
+  - optical
+  - capacity-limit
+- registry_id: AAT-0016
+  id: C4-I2-dtmf-channel-capacity
+  title: "DTMF Tones \u2014 Sixteen Symbols, No Language"
+  channel: C4
+  intent:
+  - I2
+  effect: digital
+  severity: medium
+  status: documented
+  bundle: null
+  path: kb/C4-voice-dtmf/C4-I2-dtmf-channel-capacity.md
+  mappings:
+    owasp-llm:
+    - LLM06-excessive-agency
+    owasp-agentic:
+    - T02-tool-misuse
+    mitre-atlas: []
+    mitre-attack-ics: []
+  tags:
+  - dtmf
+  - voice
+  - sip
+  - capacity-limit

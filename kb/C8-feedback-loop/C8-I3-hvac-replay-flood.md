@@ -21,9 +21,9 @@ mappings:
   mitre-atlas:      []
   mitre-attack-ics: [T1692.002, T0814, T0880]
 tags:        [replay, flooding, control, hvac, dos, unsafe-actuation]
-status:      reproduced
+status:      documented
 added:       2026-09-17
-updated:     2026-09-17
+updated:     2026-10-31
 references:
   - "OWASP, Top 10 for LLM Applications: Excessive Agency (LLM06), https://genai.owasp.org, 2025"
   - "MITRE ATT&CK for ICS: Denial of Service (T0814), https://attack.mitre.org/techniques/T0814, 2026"
