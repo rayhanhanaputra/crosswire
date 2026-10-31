@@ -26,7 +26,7 @@ channel-capacity negative results, and a reusable tool.
 ## Crosswire — the workbench
 
 [`crosswire/`](crosswire/) is a single Go binary (macOS, Windows, Linux; no cgo)
-with an embedded web UI in the Burp Repeater/Intruder style, plus five reference
+with an embedded web UI in the Burp Repeater/Intruder style, plus six reference
 targets that are real tool-calling LLM agents.
 
 ```bash
@@ -69,6 +69,7 @@ With a chat-path guardrail on, the same instruction scored 0/10 through chat and
 | `camera-agent`   | PNG → VLM (+ QR)     | `disarm_alarm`                   | AAT-0013 | reproduced, bundle in `kb/bundles/` |
 | `expense-agent`  | invoice PNG → VLM    | `approve_payment`                | AAT-0014 | documented (observed 2–3/10, not confirmed) |
 | `inbox-agent`    | PDF / ICS / EML → text | `forward_email`, `share_file`  | —        | measured 2026-10-31, see results |
+| `desk-agent`     | handoff note, stored then read | `issue_refund`         | —        | measured 2026-10-31, see results |
 
 ## Legacy Python workbench
 
