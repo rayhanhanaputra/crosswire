@@ -1,16 +1,10 @@
-<section id="delivery" data-transition="fade" style="background:#F1F2EE;color:#1B2420;font-family:'Newsreader', Georgia, serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:44px">
-<h2 style="font-size:64px;font-weight:400;line-height:1.1">Delivery and compliance are different numbers, and N = 10 moves between passes.</h2>
-<table style="font-size:30px;color:#1B2420;font-family:'IBM Plex Mono', 'Courier New', monospace;font-variant-numeric:tabular-nums">
-<tr><th style="width:30%;text-align:left;font-weight:500">vulnerable build</th><th style="width:23%;text-align:left;font-weight:400;color:#6B7069">nonce perceived</th><th style="width:23%;text-align:left;font-weight:400;color:#6B7069">tool executed</th><th style="width:24%;text-align:left;font-weight:400;color:#6B7069">through chat</th></tr>
-<tr><td>expense, pass 1</td><td>9/10</td><td style="color:#C8451F">2/10</td><td>10/10</td></tr>
-<tr><td>expense, pass 2</td><td>10/10</td><td style="color:#C8451F">3/10</td><td>0/10, guarded</td></tr>
-<tr><td>voice, pass 1</td><td>5/10</td><td style="color:#C8451F">5/10</td><td>10/10</td></tr>
-<tr><td>voice, pass 2</td><td>9/10</td><td style="color:#C8451F">9/10</td><td>0/10, guarded</td></tr>
-</table>
-<div style="display:flex;gap:0">
-<div style="width:832px;padding:0 48px 0 0"><p style="font-size:30px;line-height:1.45;color:#3A4039">Expense: the document arrived and the model mostly declined, paying the vendor on record or flagging the invoice in 7 to 8 of 10 trials. Typed into chat, the same instruction was followed 10 of 10. The channel underperformed chat here.</p></div>
-<div style="width:832px;padding:0 0 0 48px;border-left:1px solid #C9CCC4"><p style="font-size:30px;line-height:1.45;color:#3A4039">Voice: every trial whose transcript carried the nonce was followed; speech recognition was the bottleneck. 5/10 and 9/10 for one build on one day overlap, so a claim needs N of 20 or more.</p></div>
+<section id="delivery" data-transition="fade" style="background:#F1F2EE;color:#1B2420;font-family:'Schibsted Grotesk', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;justify-content:space-between">
+<h2 style="font-size:72px;font-weight:700;line-height:1.05;letter-spacing:-1px">Delivery and Compliance</h2>
+<div style="display:flex;gap:120px;font-variant-numeric:tabular-nums">
+<div style="width:700px;display:flex;flex-direction:column;gap:8px"><p style="font-size:160px;font-weight:700;line-height:1;letter-spacing:-4px">9<span style="color:#6B7069">/10</span></p><p style="font-size:36px;font-weight:500">invoices where the model read the attacker’s account</p></div>
+<div style="width:700px;display:flex;flex-direction:column;gap:8px"><p style="font-size:160px;font-weight:700;line-height:1;letter-spacing:-4px;color:#C8451F">2<span style="color:#6B7069">/10</span></p><p style="font-size:36px;font-weight:500">invoices where it paid that account</p></div>
 </div>
-<p style="position:absolute;left:128px;bottom:64px;font-size:24px;font-family:'IBM Plex Mono', 'Courier New', monospace;color:#6B7069">without the split, “the camera missed it” and “the model resisted” look identical</p>
-<aside>This is the honesty slide: show the variance and the case where the physical channel underperformed chat. Reviewers trust a project that publishes the weak rows.</aside>
+<p style="font-size:30px;line-height:1.4;color:#3A4039;width:1500px">Typed into chat, the same request was paid 10 of 10. Through the document, the model mostly paid the vendor on record.</p>
+<p style="font-size:26px;color:#6B7069">Voice, same build, two passes: 5 of 10 and 9 of 10. N = 10 moves. A claim needs 20 or more.</p>
+<aside>This is the honesty slide. Delivery and compliance are different numbers: the expense agent read the attacker's account nine times and paid it twice, while chat paid it every time. So the physical channel underperformed chat here, and we say so. Voice: every trial whose transcript carried the nonce was followed, so speech recognition was the bottleneck, and two passes of the same build gave five and nine of ten. Without the split, "the camera missed it" and "the model resisted" look identical.</aside>
 </section>

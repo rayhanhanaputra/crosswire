@@ -1,16 +1,13 @@
-<section id="tool" data-transition="fade" style="background:#F1F2EE;color:#1B2420;font-family:'Newsreader', Georgia, serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:44px">
-<h2 style="font-size:64px;font-weight:400;line-height:1.1">Crosswire is one binary: a Repeater and an Intruder for perception paths.</h2>
-<div style="display:flex;gap:0">
-<div style="width:960px;display:flex;flex-direction:column;gap:0;padding:0 48px 0 0">
-<div style="display:flex;gap:24px;padding:18px 0;border-top:1px solid #C9CCC4"><p style="width:240px;font-size:26px;font-family:'IBM Plex Mono', 'Courier New', monospace">artifacts</p><p style="width:640px;font-size:28px;line-height:1.4;color:#3A4039">QR and sign PNGs, rendered invoices, speech and tone WAVs, Morse timelines to the serial rig; decoded back where a decoder exists; text-only adapters labelled modeled</p></div>
-<div style="display:flex;gap:24px;padding:18px 0;border-top:1px solid #C9CCC4"><p style="width:240px;font-size:26px;font-family:'IBM Plex Mono', 'Courier New', monospace">verdicts</p><p style="width:640px;font-size:28px;line-height:1.4;color:#3A4039">three arms, a nonce per trial, a sink for executed tools, Wilson intervals, five outcomes, never a bare tick</p></div>
-<div style="display:flex;gap:24px;padding:18px 0;border-top:1px solid #C9CCC4;border-bottom:1px solid #C9CCC4"><p style="width:240px;font-size:26px;font-family:'IBM Plex Mono', 'Courier New', monospace">bundles</p><p style="width:640px;font-size:28px;line-height:1.4;color:#3A4039">a zip of run.json, artifacts, sink events and hashes; a knowledge-base entry says “reproduced” only by citing one, and the registry check enforces it</p></div>
-</div>
-<div style="width:704px;display:flex;flex-direction:column;gap:24px;padding:0 0 0 48px;border-left:1px solid #C9CCC4">
-<div style="display:flex;flex-direction:column;gap:10px;font-family:'IBM Plex Mono', 'Courier New', monospace;background:#1B2420;color:#F1F2EE;padding:28px"><p style="font-size:26px">$ crosswire serve</p><p style="font-size:26px">$ crosswire target home-agent --guardrail</p><p style="font-size:26px">$ crosswire target expense-agent --policy hardened</p></div>
-<p style="font-size:28px;line-height:1.4;color:#3A4039">Go, no cgo; builds for macOS, Windows and Linux. Embedded web UI on loopback. The four reference targets ship in the same binary.</p>
+<section id="tool" data-transition="fade" style="background:#F1F2EE;color:#1B2420;font-family:'Schibsted Grotesk', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;justify-content:space-between">
+<h2 style="font-size:72px;font-weight:700;line-height:1.05;letter-spacing:-1px">Crosswire</h2>
+<div style="display:flex;gap:80px;align-items:center">
+<div style="width:760px;display:flex;flex-direction:column;gap:12px;background:#1B2420;color:#F1F2EE;padding:48px;font-family:'Courier New', monospace"><p style="font-size:30px">$ crosswire serve</p><p style="font-size:30px">$ crosswire target home-agent --guardrail</p><p style="font-size:30px">$ crosswire target expense-agent --policy hardened</p></div>
+<div style="width:760px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:34px;line-height:1.35"><b>Real artifacts.</b> PNG, WAV and pulse timelines, decoded back to check.</p>
+<p style="font-size:34px;line-height:1.35"><b>Verdicts from trials.</b> Three arms, a nonce each, a sink, intervals.</p>
+<p style="font-size:34px;line-height:1.35"><b>Run bundles.</b> A knowledge-base entry is reproduced only by citing one.</p>
 </div>
 </div>
-<p style="position:absolute;left:128px;bottom:64px;font-size:24px;font-family:'IBM Plex Mono', 'Courier New', monospace;color:#6B7069">repository AIAgentsAllTheThings, directory crosswire/ · contract and verdict rules in docs/CONTRACT.md</p>
-<aside>If the session is an Arsenal slot, this slide becomes the demo: load the reference target, preview the artifact, send ten trials, show the verdict panel and download the bundle.</aside>
+<p style="font-size:26px;color:#6B7069">One Go binary for macOS, Windows and Linux. Embedded UI on loopback. Four reference targets included.</p>
+<aside>A Repeater and an Intruder for perception paths. If the session is an Arsenal slot this is the demo: load the reference target, preview the artifact, send ten trials with a control, show the verdict, flip to hardened, re-run, download the bundle. A channel that only relabels text is marked modeled everywhere and cannot back a reproduced claim.</aside>
 </section>

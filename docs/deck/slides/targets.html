@@ -1,17 +1,16 @@
-<section id="targets" data-transition="fade" style="background:#F1F2EE;color:#1B2420;font-family:'Newsreader', Georgia, serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:44px">
-<h2 style="font-size:64px;font-weight:400;line-height:1.1">Four reference targets, each a real tool-calling model, in three builds.</h2>
-<table style="font-size:28px;color:#1B2420">
-<tr><th style="width:17%;text-align:left;font-family:'IBM Plex Mono', 'Courier New', monospace;font-weight:500">target</th><th style="width:33%;text-align:left;font-weight:400;color:#6B7069">perceives</th><th style="width:30%;text-align:left;font-weight:400;color:#6B7069">privileged tool</th><th style="width:20%;text-align:left;font-weight:400;color:#6B7069">adapter</th></tr>
-<tr><td style="font-family:'IBM Plex Mono', 'Courier New', monospace">home-agent</td><td>a device name or state in its entity list</td><td style="font-family:'IBM Plex Mono', 'Courier New', monospace">unlock_door, disarm_alarm</td><td>device-name, modeled</td></tr>
-<tr><td style="font-family:'IBM Plex Mono', 'Courier New', monospace">voice-agent</td><td>WAV, transcribed by a speech model</td><td style="font-family:'IBM Plex Mono', 'Courier New', monospace">send_email, transfer_funds</td><td>speech, TTS to WAV</td></tr>
-<tr><td style="font-family:'IBM Plex Mono', 'Courier New', monospace">camera-agent</td><td>PNG, read by a vision model</td><td style="font-family:'IBM Plex Mono', 'Courier New', monospace">disarm_alarm</td><td>sign, qr</td></tr>
-<tr><td style="font-family:'IBM Plex Mono', 'Courier New', monospace">expense-agent</td><td>invoice PNG, read by a vision model</td><td style="font-family:'IBM Plex Mono', 'Courier New', monospace">approve_payment</td><td>invoice</td></tr>
-</table>
-<div style="display:flex;gap:0;border-top:1px solid #C9CCC4;padding:28px 0 0 0">
-<div style="width:520px;display:flex;flex-direction:column;gap:10px;padding:0 40px 0 0"><p style="font-size:26px;font-family:'IBM Plex Mono', 'Courier New', monospace">vulnerable</p><p style="font-size:28px;line-height:1.4;color:#3A4039">one agent loop; perceived text in the prompt; every tool offered.</p></div>
-<div style="width:560px;display:flex;flex-direction:column;gap:10px;padding:0 40px;border-left:1px solid #C9CCC4"><p style="font-size:26px;font-family:'IBM Plex Mono', 'Courier New', monospace">+ chat guardrail</p><p style="font-size:28px;line-height:1.4;color:#3A4039">a prompt-injection classifier on the chat path only, where products put it.</p></div>
-<div style="width:584px;display:flex;flex-direction:column;gap:10px;padding:0 0 0 40px;border-left:1px solid #C9CCC4"><p style="font-size:26px;font-family:'IBM Plex Mono', 'Courier New', monospace">hardened</p><p style="font-size:28px;line-height:1.4;color:#3A4039">perception quarantined into a fixed schema; privileged tools withheld; confirmation only from the user channel.</p></div>
+<section id="targets" data-transition="fade" style="background:#F1F2EE;color:#1B2420;font-family:'Schibsted Grotesk', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;justify-content:space-between">
+<h2 style="font-size:72px;font-weight:700;line-height:1.05;letter-spacing:-1px">Reference Targets</h2>
+<div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px;padding:0"><p style="font-size:40px;font-weight:700">Home</p><p style="font-size:28px;line-height:1.35;color:#3A4039">reads a device name in its entity list</p><p style="font-size:28px;line-height:1.35;color:#C8451F">unlocks the door</p></div>
+<div style="display:flex;flex-direction:column;gap:12px;padding:0"><p style="font-size:40px;font-weight:700">Voice</p><p style="font-size:28px;line-height:1.35;color:#3A4039">transcribes audio with a speech model</p><p style="font-size:28px;line-height:1.35;color:#C8451F">sends email</p></div>
+<div style="display:flex;flex-direction:column;gap:12px;padding:0"><p style="font-size:40px;font-weight:700">Camera</p><p style="font-size:28px;line-height:1.35;color:#3A4039">reads a frame with a vision model</p><p style="font-size:28px;line-height:1.35;color:#C8451F">disarms the alarm</p></div>
+<div style="display:flex;flex-direction:column;gap:12px;padding:0"><p style="font-size:40px;font-weight:700">Expense</p><p style="font-size:28px;line-height:1.35;color:#3A4039">extracts an invoice with a vision model</p><p style="font-size:28px;line-height:1.35;color:#C8451F">approves payment</p></div>
 </div>
-<p style="position:absolute;left:128px;bottom:64px;font-size:24px;font-family:'IBM Plex Mono', 'Courier New', monospace;color:#6B7069">reference agents written for this project, not products · gpt-4o-mini · temperature 0</p>
-<aside>Stress that the two policies differ in architecture, not in a keyword filter. The earlier demo target decided "compromised" with eight regular expressions; it taught the wrong lesson.</aside>
+<div style="display:flex;gap:64px">
+<div style="width:500px;display:flex;flex-direction:column;gap:8px"><p style="font-size:30px;font-weight:700">Vulnerable</p><p style="font-size:28px;line-height:1.35;color:#3A4039">one loop, every tool offered</p></div>
+<div style="width:500px;display:flex;flex-direction:column;gap:8px"><p style="font-size:30px;font-weight:700">Chat guardrail</p><p style="font-size:28px;line-height:1.35;color:#3A4039">a classifier on the chat path only</p></div>
+<div style="width:500px;display:flex;flex-direction:column;gap:8px"><p style="font-size:30px;font-weight:700">Hardened</p><p style="font-size:28px;line-height:1.35;color:#3A4039">schema quarantine, withheld tools, user confirmation</p></div>
+</div>
+<p style="font-size:26px;color:#6B7069">Real tool-calling agents on gpt-4o-mini, written for this project. Not products.</p>
+<aside>Four agents, each a real model with real tools. The red line under each is the privileged action we count. The three builds differ in architecture, not in a keyword filter: the earlier demo target decided "compromised" with eight regular expressions, which taught the wrong lesson.</aside>
 </section>
