@@ -161,6 +161,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/runs/{id}", s.getRun)
 	mux.HandleFunc("GET /api/runs/{id}/events", s.runEvents)
 	mux.HandleFunc("GET /api/runs/{id}/artifacts/{arm}/{index}", s.getArtifact)
+	mux.HandleFunc("GET /api/runs/{id}/artifacts/{arm}/{index}/reply", s.getReplyArtifact)
 	mux.HandleFunc("GET /api/runs/{id}/bundle", s.getBundle)
 
 	mux.HandleFunc("POST /api/intruder", s.createIntruder)

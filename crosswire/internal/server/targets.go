@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -126,8 +127,28 @@ func normalizeTarget(t *model.Target) error {
 		return errors.New(`environment must be "staging" or "production"`)
 	}
 	t.Endpoint = strings.TrimSpace(t.Endpoint)
-	if !absoluteHTTP(t.Endpoint) {
-		return errors.New("endpoint must be an absolute http(s) URL")
+	t.Transport = strings.ToLower(strings.TrimSpace(t.Transport))
+	switch t.Transport {
+	case "", "http":
+		t.Transport = ""
+		if !absoluteHTTP(t.Endpoint) {
+			return errors.New("endpoint must be an absolute http(s) URL")
+		}
+	case "sip":
+		if !strings.HasPrefix(t.Endpoint, "sip:") || !strings.Contains(t.Endpoint, "@") {
+			return errors.New("a sip target's endpoint must be a sip:user@host[:port] URI")
+		}
+		if t.SIP.PasswordEnv != "" && !envNameRe.MatchString(t.SIP.PasswordEnv) {
+			return errors.New("sip.password_env must be the NAME of an environment variable, not the password")
+		}
+		if t.SIP.LocalIP != "" && net.ParseIP(t.SIP.LocalIP) == nil {
+			return errors.New("sip.local_ip must be an IP address")
+		}
+		if t.SIP.ListenSeconds < 0 || t.SIP.ListenSeconds > 120 || t.SIP.RingSeconds < 0 || t.SIP.RingSeconds > 120 {
+			return errors.New("sip ring_seconds and listen_seconds must be between 0 and 120")
+		}
+	default:
+		return fmt.Errorf("transport %q is not supported; use http or sip", t.Transport)
 	}
 	t.DirectEndpoint = strings.TrimSpace(t.DirectEndpoint)
 	if t.DirectEndpoint != "" && !absoluteHTTP(t.DirectEndpoint) {

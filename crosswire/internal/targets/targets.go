@@ -30,6 +30,8 @@ type perceiveReq struct {
 	Input       string `json:"input"`
 	ImageBase64 string `json:"image_base64"`
 	AudioBase64 string `json:"audio_base64"`
+	FileBase64  string `json:"file_base64"`
+	FileType    string `json:"file_type"`
 }
 
 type spec struct {
@@ -43,7 +45,10 @@ var specs = map[string]spec{
 	"voice-agent":   {7202, perceiveVoice, chatVoice},
 	"camera-agent":  {7203, perceiveCamera, chatCamera},
 	"expense-agent": {7204, perceiveExpense, chatExpense},
+	"inbox-agent":   {7205, perceiveInbox, chatInbox},
 }
+
+const targetNames = "home-agent, voice-agent, camera-agent, expense-agent or inbox-agent"
 
 // Options configures a Server. LLM is injectable so tests can point it at a
 // fake OpenAI-compatible server.
@@ -76,7 +81,7 @@ func (e badRequest) Error() string { return string(e) }
 func New(name string, o Options) (*Server, error) {
 	sp, ok := specs[name]
 	if !ok {
-		return nil, fmt.Errorf("unknown target %q (want home-agent, voice-agent, camera-agent or expense-agent)", name)
+		return nil, fmt.Errorf("unknown target %q (want %s)", name, targetNames)
 	}
 	if o.Policy == "" {
 		o.Policy = agent.Vulnerable
@@ -383,7 +388,7 @@ func Main(version string, args []string) error {
 	name := args[0]
 	sp, ok := specs[name]
 	if !ok {
-		return fmt.Errorf("unknown target %q (want home-agent, voice-agent, camera-agent or expense-agent)", name)
+		return fmt.Errorf("unknown target %q (want %s)", name, targetNames)
 	}
 	fs := flag.NewFlagSet("target "+name, flag.ContinueOnError)
 	port := fs.Int("port", sp.port, "listen port (127.0.0.1 only)")

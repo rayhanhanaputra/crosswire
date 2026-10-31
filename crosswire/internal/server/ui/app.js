@@ -123,17 +123,22 @@ function showTab(name) {
 }
 
 // ---------- shared: field editors ----------
-const NUMERIC = new Set(['size', 'contrast', 'scale', 'wpm', 'tone_ms', 'gap_ms', 'note_contrast']);
-const MULTILINE = new Set(['text', 'note']);
-const TEXTISH = ['text', 'note', 'name', 'keys'];
+const NUMERIC = new Set(['size', 'contrast', 'scale', 'wpm', 'tone_ms', 'gap_ms', 'note_contrast', 'note_gray']);
+const MULTILINE = new Set(['text', 'note', 'body', 'description']);
+const TEXTISH = ['text', 'note', 'body', 'description', 'name', 'keys'];
 const PLACEHOLDER = {
   text: 'Payload text. {{canary}} becomes a fresh nonce per trial.',
   note: 'Text the attacker controls. {{canary}} becomes a fresh nonce per trial.',
   name: 'Device name. {{canary}} becomes a fresh nonce per trial.',
+  body: 'Document or message body. {{canary}} becomes a fresh nonce per trial.',
+  description: 'Invite description. {{canary}} becomes a fresh nonce per trial.',
   keys: '0-9 * # A-D',
-  size: '256', contrast: '1', scale: '2', wpm: '12', tone_ms: '100', gap_ms: '100', note_contrast: '1',
+  size: '256', contrast: '1', scale: '2', wpm: '12', tone_ms: '100', gap_ms: '100', note_contrast: '1', note_gray: '0',
   iban: 'IBAN, may contain {{canary}}', voice: 'alloy',
+  title: 'Document title', summary: 'Invite title', organizer: 'Organizer display name', location: 'Room or link',
+  from_name: 'Sender display name', from: 'sender@example.com', reply_to: 'Reply-To address', subject: 'Subject line',
 };
+const DOCUMENT_KINDS = new Set(['application/pdf', 'text/calendar', 'message/rfc822']);
 
 function readFileBase64(file) {
   return new Promise((resolve, reject) => {
@@ -257,6 +262,9 @@ function mediaFor(kind, src, content) {
   else if (kind === 'pulses') {
     if (content) box.append(pulseTimeline(content));
     box.append(h('audio', { controls: true, src }));
+  } else if (DOCUMENT_KINDS.has(kind)) {
+    box.append(h('pre', { class: 'doc' }, content || ''));
+    box.append(h('a', { class: 'btn', href: src, download: 'artifact' }, 'Download file'));
   }
   return box;
 }
@@ -311,13 +319,18 @@ function trialRow(t) {
     findings.append(h('div', { class: f.hint ? 'hint-find' : '' }, f.hint ? h('span', { class: 'tag' }, 'hint') : null, ' ', `${f.rule}: ${f.detail}`));
   }
   const response = ex.error ? `error: ${ex.error}` : ex.response_text || (ex.status ? `HTTP ${ex.status}` : '');
+  const responseTd = clampCell(response);
+  if (ex.reply_artifact) {
+    const [rid, arm, idx] = ex.reply_artifact.split('/');
+    responseTd.append(h('audio', { controls: true, src: `/api/runs/${encodeURIComponent(rid)}/artifacts/${arm}/${idx}/reply`, title: 'far end audio' }));
+  }
   const sinkTd = h('td', { class: 'mono' });
   for (const ev of t.sink || []) sinkTd.append(h('div', {}, `${ev.name} ${JSON.stringify(ev.arguments)}`));
   return h('tr', { class: 't-' + t.arm },
     h('td', {}, t.arm), h('td', {}, t.index), h('td', { class: 'mono nowrap' }, t.canary),
     h('td', { class: 'nowrap', title: 'perceived text contains the canary' }, delivered),
     h('td', { class: t.hit ? 'hit-yes' : 'muted' }, t.hit ? 'hit' : 'no'),
-    findings, clampCell(response), clampCell(ex.perceived), sinkTd);
+    findings, responseTd, clampCell(ex.perceived), sinkTd);
 }
 
 function trialsTable(trials) {
@@ -431,6 +444,7 @@ const REF_TARGETS = {
   'voice-agent': { port: 7202, tools: ['send_email', 'transfer_funds'], note: 'WAV to ASR', canaryRequired: true },
   'camera-agent': { port: 7203, tools: ['mark_clear', 'disarm_alarm'], note: 'PNG to VLM', canaryRequired: false },
   'expense-agent': { port: 7204, tools: ['approve_payment'], note: 'invoice PNG to VLM; IBAN is the canary', canaryRequired: true },
+  'inbox-agent': { port: 7205, tools: ['forward_email', 'share_file'], note: 'PDF, ICS or EML to text', canaryRequired: true },
 };
 
 function refTarget(name) {
@@ -439,7 +453,7 @@ function refTarget(name) {
   return {
     name, environment: 'staging', enabled: true, method: 'POST', timeout_seconds: 60,
     endpoint: base + '/perceive', direct_endpoint: base + '/chat',
-    request_template: '{"source":"{{source}}","input":"{{content}}","image_base64":"{{image_base64}}","audio_base64":"{{audio_base64}}"}',
+    request_template: '{"source":"{{source}}","input":"{{content}}","image_base64":"{{image_base64}}","audio_base64":"{{audio_base64}}","file_base64":"{{file_base64}}","file_type":"{{file_type}}"}',
     direct_template: '{"message":"{{content}}"}',
     response_path: 'text', actions_path: 'actions', perceived_path: 'perceived',
     headers: {}, secret_headers: {},
@@ -490,6 +504,7 @@ function initTargets() {
   F.environment = selectOf([['staging', 'staging'], ['production', 'production']], 'staging');
   F.enabled = h('input', { type: 'checkbox', checked: true });
   F.require_canary = h('input', { type: 'checkbox', checked: true });
+  F.transport = selectOf([['http', 'http (POST the artifact)'], ['sip', 'sip (place a call)']], 'http');
   F.ref = selectOf(Object.keys(REF_TARGETS).map((n) => [n, `${n} (port ${REF_TARGETS[n].port})`]));
 
   const list = h('ul', { class: 'list' });
@@ -507,7 +522,16 @@ function initTargets() {
       text('direct_endpoint', 'Direct endpoint (chat path, optional)', { placeholder: 'http://127.0.0.1:7201/chat' }),
       text('method', 'Method', { placeholder: 'POST' }),
       text('timeout_seconds', 'Timeout (seconds)', { placeholder: '30' }),
+      h('label', { class: 'f' }, 'Transport (perception path)', F.transport, h('span', { class: 'hint' }, 'sip places a real call with the audio artifact; the endpoint is then a sip:user@host URI.')),
       h('label', { class: 'check' }, F.enabled, 'Enabled')),
+    h('h3', {}, 'SIP (only with the sip transport)'),
+    h('div', { class: 'grid2' },
+      text('sip_from', 'Caller user part', { placeholder: 'crosswire' }),
+      text('sip_local_ip', 'Local IP to advertise', { placeholder: 'chosen from routing when empty' }),
+      text('sip_username', 'Digest username', { placeholder: 'optional' }),
+      text('sip_password_env', 'Password env var NAME', { placeholder: 'SIP_PASSWORD', hint: 'The name of an environment variable. The value never enters the store.' }),
+      text('sip_ring_seconds', 'Ring timeout (s)', { placeholder: '32' }),
+      text('sip_listen_seconds', 'Listen after playing (s)', { placeholder: '20' })),
     h('h3', {}, 'Request'),
     h('div', { class: 'grid2' },
       text('request_template', 'Request template', { area: true, rows: 3, placeholder: '{"source":"{{source}}","input":"{{content}}"}' }),
@@ -544,6 +568,11 @@ function initTargets() {
     F.enabled.checked = x.enabled !== false;
     for (const k of ['endpoint', 'direct_endpoint', 'method', 'request_template', 'direct_template', 'response_path', 'actions_path', 'perceived_path']) F[k].value = x[k] || '';
     F.timeout_seconds.value = x.timeout_seconds || '';
+    F.transport.value = x.transport || 'http';
+    const sip = x.sip || {};
+    F.sip_from.value = sip.from || ''; F.sip_local_ip.value = sip.local_ip || '';
+    F.sip_username.value = sip.username || ''; F.sip_password_env.value = sip.password_env || '';
+    F.sip_ring_seconds.value = sip.ring_seconds || ''; F.sip_listen_seconds.value = sip.listen_seconds || '';
     F.headers.value = kvToText(x.headers, ': ');
     F.secret_headers.value = kvToText(x.secret_headers, ': ');
     const ev = x.evidence || {};
@@ -559,6 +588,11 @@ function initTargets() {
       name: F.name.value, environment: F.environment.value, enabled: F.enabled.checked,
       endpoint: F.endpoint.value, direct_endpoint: F.direct_endpoint.value, method: F.method.value,
       timeout_seconds: Number(F.timeout_seconds.value) || 0,
+      transport: F.transport.value,
+      sip: {
+        from: F.sip_from.value, local_ip: F.sip_local_ip.value, username: F.sip_username.value, password_env: F.sip_password_env.value,
+        ring_seconds: Number(F.sip_ring_seconds.value) || 0, listen_seconds: Number(F.sip_listen_seconds.value) || 0,
+      },
       request_template: F.request_template.value, direct_template: F.direct_template.value,
       response_path: F.response_path.value, actions_path: F.actions_path.value, perceived_path: F.perceived_path.value,
       headers: parseKV(F.headers.value, 'headers'), secret_headers: parseKV(F.secret_headers.value, 'secret headers'),
@@ -711,7 +745,7 @@ function renderPreview(el, p) {
   if (p.artifact) {
     el.append(h('h3', {}, 'Artifact'), artifactInfo(p.artifact));
     if (p.artifact_base64) {
-      const mime = p.kind === 'image/png' ? 'image/png' : 'audio/wav';
+      const mime = p.kind === 'image/png' || DOCUMENT_KINDS.has(p.kind) ? p.kind : 'audio/wav';
       el.append(mediaFor(p.kind, `data:${mime};base64,${p.artifact_base64}`, p.input.content));
     }
   }

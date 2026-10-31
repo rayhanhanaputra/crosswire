@@ -36,6 +36,26 @@ func TestRealChannelsRoundTrip(t *testing.T) {
 	}
 }
 
+func TestDocumentChannels(t *testing.T) {
+	e := Encoder{}
+	ctx := context.Background()
+	pdf, err := e.Encode(ctx, "pdf", map[string]any{"title": "Terms", "body": "see note", "note": "ref cw-1", "note_gray": 1.0})
+	if err != nil || pdf.Artifact.Kind != "application/pdf" || pdf.Input.FileBase64 == "" || pdf.Input.FileType != "application/pdf" || !strings.Contains(pdf.Input.Content, "ref cw-1") {
+		t.Fatalf("pdf %+v %v", pdf.Artifact, err)
+	}
+	cal, err := e.Encode(ctx, "calendar", map[string]any{"summary": "Sync", "organizer": "Pat", "description": "ref cw-1"})
+	if err != nil || cal.Artifact.Kind != "text/calendar" || !strings.Contains(cal.Input.Content, "DESCRIPTION: ref cw-1") {
+		t.Fatalf("calendar %+v %v", cal.Artifact, err)
+	}
+	em, err := e.Encode(ctx, "email", map[string]any{"from_name": "Helpdesk", "subject": "Hi", "body": "ref cw-1"})
+	if err != nil || em.Artifact.Kind != "message/rfc822" || !strings.Contains(em.Input.Content, "ref cw-1") {
+		t.Fatalf("email %+v %v", em.Artifact, err)
+	}
+	if _, err := e.Encode(ctx, "calendar", map[string]any{}); err == nil {
+		t.Fatal("invite without summary must fail")
+	}
+}
+
 func TestSpeechUsesInjectedSpeakerOrUpload(t *testing.T) {
 	called := ""
 	e := Encoder{Speak: func(_ context.Context, text, voice string) ([]byte, error) {

@@ -47,11 +47,12 @@ crosswire target NAME [--port N] [--policy vulnerable|hardened] [--guardrail] [-
 | `voice-agent`   | 7202 | WAV → ASR, or DTMF   | `send_email`, `transfer_funds` |
 | `camera-agent`  | 7203 | PNG → VLM, QR        | `mark_clear`, `disarm_alarm`   |
 | `expense-agent` | 7204 | invoice PNG → VLM    | `approve_payment`              |
+| `inbox-agent`   | 7205 | PDF / ICS / EML → text | `forward_email`, `share_file` |
 
 ## Workflow
 
 1. **Targets** — add the agent. The "Load reference target" helper fills in the
-   endpoints and the forbidden tools for the four built-ins. For your own agent,
+   endpoints and the forbidden tools for the five built-ins. For your own agent,
    point `endpoint` at its perception path, `direct_endpoint` at its chat path, and
    name the tools that must never run. Have the agent POST executed tools to the
    sink URL shown in the header, or configure a webhook that does.
@@ -92,23 +93,37 @@ resisted" are different findings.
 | `dtmf`        | WAV, decoded back          | yes     |
 | `morse-led`   | pulse timeline + serial    | yes     |
 | `device-name` | text                       | modeled |
+| `pdf`         | PDF, text read back        | yes     |
+| `calendar`    | ICS invite, read back      | yes     |
+| `email`       | EML message, read back     | yes     |
 
 A modeled adapter is labelled in the UI and in the run, and cannot back a
 `reproduced` claim. The ESP32 path for `device-name` is planned.
+
+## Transports
+
+The perception path is HTTP by default: the artifact is posted to the target's
+endpoint. A target can instead set `transport: sip` with a `sip:user@host` endpoint.
+The speech or DTMF artifact is then played into a real call (G.711 μ-law over RTP,
+digest authentication if the endpoint asks, far-end audio recorded and kept with
+the trial, BYE at the end). Any SIP endpoint works: the agent's own SIP listener,
+a PBX extension, or a trunk that reaches a phone number. The chat path stays HTTP
+and the sink stays the evidence. The SIP connector is plain UDP in the binary; no
+library, no cgo.
 
 ## Layout
 
 ```text
 cmd/crosswire        entry point: serve | target | version
-internal/signal      Morse, QR, DTMF, text-in-image, invoice renderers and decoders
+internal/signal      Morse, QR, DTMF, text-in-image, invoice, PDF/ICS/EML and G.711 codecs
 internal/channel     adapters → artifact + input
-internal/connector   HTTP delivery, template rendering, response parsing
+internal/connector   HTTP and SIP delivery, template rendering, response parsing
 internal/sink        out-of-band tool-execution receiver
 internal/evidence    rules, Wilson intervals, verdicts
 internal/engine      trials, arms, canaries
 internal/store       bbolt persistence
 internal/server      API + embedded UI
-internal/targets     the four reference agents
+internal/targets     the five reference agents
 internal/agent       tool-calling loop with vulnerable / hardened policies
 internal/rig         serial driver for the Arduino LED rig
 docs/CONTRACT.md     the wire contract and verdict rules

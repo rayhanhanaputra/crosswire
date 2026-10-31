@@ -163,8 +163,15 @@ func (s *Server) runEvents(w http.ResponseWriter, r *http.Request) {
 func artifactKey(runID, arm, index string) string { return runID + "/" + arm + "/" + index }
 
 func artifactType(kind string) (contentType, ext string) {
-	if kind == "image/png" {
+	switch kind {
+	case "image/png":
 		return "image/png", "png"
+	case "application/pdf":
+		return "application/pdf", "pdf"
+	case "text/calendar":
+		return "text/calendar; charset=utf-8", "ics"
+	case "message/rfc822":
+		return "message/rfc822", "eml"
 	}
 	return "audio/wav", "wav" // pulses are stored as a Morse sidetone WAV
 }
@@ -186,6 +193,18 @@ func (s *Server) getArtifact(w http.ResponseWriter, r *http.Request) {
 	}
 	ct, _ := artifactType(run.Channel.Artifact.Kind)
 	w.Header().Set("Content-Type", ct)
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	_, _ = w.Write(data)
+}
+
+// getReplyArtifact serves the far end's audio from a SIP trial.
+func (s *Server) getReplyArtifact(w http.ResponseWriter, r *http.Request) {
+	data, err := s.st.GetArtifact(artifactKey(r.PathValue("id"), r.PathValue("arm"), r.PathValue("index")) + "/reply")
+	if err != nil {
+		storeErr(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "audio/wav")
 	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	_, _ = w.Write(data)
 }
@@ -221,6 +240,11 @@ func (s *Server) getBundle(w http.ResponseWriter, r *http.Request) {
 		}
 		_, ext := artifactType(run.Channel.Artifact.Kind)
 		files["artifacts/"+t.Arm+"-"+idx+"."+ext] = data
+		if t.Exchange.ReplyArtifact != "" {
+			if reply, err := s.st.GetArtifact(t.Exchange.ReplyArtifact); err == nil {
+				files["artifacts/"+t.Arm+"-"+idx+"-reply.wav"] = reply
+			}
+		}
 	}
 	if events == nil {
 		events = []model.SinkEvent{}

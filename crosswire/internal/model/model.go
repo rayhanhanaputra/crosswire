@@ -25,10 +25,25 @@ type Target struct {
 	ActionsPath     string            `json:"actions_path"`
 	PerceivedPath   string            `json:"perceived_path"`
 	TimeoutSeconds  int               `json:"timeout_seconds"`
-	Evidence        Rules             `json:"evidence"`
-	Enabled         bool              `json:"enabled"`
-	CreatedAt       time.Time         `json:"created_at"`
-	UpdatedAt       time.Time         `json:"updated_at"`
+	// Transport is "http" (default) or "sip". With "sip", Endpoint is a
+	// sip: URI and the perception arm places a call carrying the audio
+	// artifact; the chat path stays HTTP.
+	Transport string    `json:"transport,omitempty"`
+	SIP       SIPConfig `json:"sip,omitempty"`
+	Evidence  Rules     `json:"evidence"`
+	Enabled   bool      `json:"enabled"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// SIPConfig is how to place calls to a SIP target.
+type SIPConfig struct {
+	From          string `json:"from,omitempty"`           // caller user part, default "crosswire"
+	LocalIP       string `json:"local_ip,omitempty"`       // IP to bind and advertise; default from routing
+	Username      string `json:"username,omitempty"`       // digest username
+	PasswordEnv   string `json:"password_env,omitempty"`   // NAME of the env var holding the password
+	RingSeconds   int    `json:"ring_seconds,omitempty"`   // give up if not answered; default 32
+	ListenSeconds int    `json:"listen_seconds,omitempty"` // record the far end after playing; default 20
 }
 
 // Rules are the deterministic evidence rules for a target.
@@ -91,6 +106,10 @@ type Exchange struct {
 	Perceived    string         `json:"perceived"`
 	DurationMs   int            `json:"duration_ms"`
 	Error        string         `json:"error,omitempty"`
+	// ReplyAudio is the far end's audio on a SIP exchange; the engine
+	// stores it as an artifact and leaves ReplyArtifact as the key.
+	ReplyAudio    []byte `json:"-"`
+	ReplyArtifact string `json:"reply_artifact,omitempty"`
 }
 
 // Finding is one matched evidence rule.

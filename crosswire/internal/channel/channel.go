@@ -54,6 +54,9 @@ var catalogue = []Info{
 	{"dtmf", "microphone/dtmf", "audio/wav", false, []string{"keys", "tone_ms", "gap_ms"}, "Capacity demo: 16 symbols, cannot carry language."},
 	{"morse-led", "light-sensor/morse", "pulses", false, []string{"text", "wpm"}, "Capacity demo: timing only; a 1 fps camera cannot read it."},
 	{"device-name", "ble/device-name", "text", true, []string{"name"}, "MODELED: the name is sent as text; no radio is used."},
+	{"pdf", "inbox/pdf", "application/pdf", false, []string{"title", "body", "note", "note_gray"}, "Real one-page PDF; note_gray 1 is white ink, unseen by a reader, read by an extractor."},
+	{"calendar", "inbox/ics", "text/calendar", false, []string{"summary", "organizer", "location", "description"}, "Real iCalendar invite; every field is set by whoever sends it."},
+	{"email", "inbox/eml", "message/rfc822", false, []string{"from_name", "from", "reply_to", "subject", "body"}, "Real RFC 5322 message; display name and Reply-To are the sender's."},
 }
 
 // Catalogue lists the adapters.
@@ -184,6 +187,44 @@ func (e Encoder) Encode(ctx context.Context, adapter string, fields map[string]a
 		}
 		return enc, nil
 
+	case "pdf":
+		doc := signal.PDFDoc{Title: str(fields, "title"), Body: str(fields, "body"), Note: str(fields, "note"), NoteGray: fnum(fields, "note_gray", 0)}
+		pdf, err := signal.PDF(doc)
+		if err != nil {
+			return Encoded{}, err
+		}
+		text, derr := signal.PDFText(pdf)
+		if derr != nil {
+			return Encoded{}, fmt.Errorf("rendered PDF does not read back: %w", derr)
+		}
+		return file("inbox/pdf", "application/pdf", text, pdf, fmt.Sprintf("PDF, %d lines, note gray %.2f", len(strings.Split(text, "\n")), doc.NoteGray)), nil
+
+	case "calendar":
+		inv := signal.Invite{Summary: str(fields, "summary"), Organizer: str(fields, "organizer"), Email: str(fields, "email"),
+			Location: str(fields, "location"), Description: str(fields, "description")}
+		ics, err := signal.ICS(inv)
+		if err != nil {
+			return Encoded{}, err
+		}
+		text, derr := signal.ICSText(ics)
+		if derr != nil {
+			return Encoded{}, fmt.Errorf("rendered invite does not read back: %w", derr)
+		}
+		return file("inbox/ics", "text/calendar", text, ics, "iCalendar invite"), nil
+
+	case "email":
+		em := signal.Email{FromName: str(fields, "from_name"), From: str(fields, "from"), ReplyTo: str(fields, "reply_to"),
+			Subject: str(fields, "subject"), Body: str(fields, "body")}
+		eml, err := signal.EML(em)
+		if err != nil {
+			return Encoded{}, err
+		}
+		text, derr := signal.EMLText(eml)
+		if derr != nil {
+			return Encoded{}, fmt.Errorf("rendered email does not read back: %w", derr)
+		}
+		return file("inbox/eml", "message/rfc822", text, eml, "RFC 5322 message"), nil
+
 	case "device-name":
 		n := str(fields, "name")
 		if n == "" {
@@ -211,6 +252,16 @@ func audio(source, content string, wav []byte, summary, decoded string) Encoded 
 		Input:    connector.Input{Source: source, Content: content, AudioBase64: base64.StdEncoding.EncodeToString(wav)},
 		Bytes:    wav,
 		Artifact: &model.Artifact{Kind: "audio/wav", Bytes: len(wav), SHA256: sum(wav), Summary: summary, Decoded: decoded},
+	}
+}
+
+// file packs a document. Content is the text an extractor reads back, so
+// delivery and the direct arm use what the agent would actually see.
+func file(source, kind, content string, data []byte, summary string) Encoded {
+	return Encoded{
+		Input:    connector.Input{Source: source, Content: content, FileBase64: base64.StdEncoding.EncodeToString(data), FileType: kind},
+		Bytes:    data,
+		Artifact: &model.Artifact{Kind: kind, Bytes: len(data), SHA256: sum(data), Summary: summary, Decoded: content},
 	}
 }
 

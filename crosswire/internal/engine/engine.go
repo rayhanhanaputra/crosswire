@@ -94,6 +94,12 @@ func (e *Engine) Validate(req Request) (model.Target, error) {
 	if req.Direct && t.DirectEndpoint == "" {
 		return t, errors.New("direct arm requested but the target has no direct endpoint")
 	}
+	if t.Transport == "sip" {
+		enc, _ := e.Encoder.Encode(context.Background(), req.Adapter, channel.Substitute(req.Fields, "cw-preview"))
+		if enc.Artifact == nil || enc.Artifact.Kind != "audio/wav" {
+			return t, errors.New("a sip target takes audio only: use the speech or dtmf adapter")
+		}
+	}
 	payloadText := fmt.Sprint(req.Fields)
 	if bad := evidence.SelfMatching(t.Evidence, payloadText); len(bad) > 0 {
 		return t, fmt.Errorf("response marker %q occurs in the payload; it cannot be evidence", bad[0])
@@ -220,6 +226,13 @@ func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID s
 		ex.Error = sendErr.Error()
 	}
 	ex.Request = redactMedia(ex.Request)
+	if len(ex.ReplyAudio) > 0 {
+		key := fmt.Sprintf("%s/%s/%d/reply", runID, arm, index)
+		if err := e.Store.PutArtifact(key, ex.ReplyAudio); err == nil {
+			ex.ReplyArtifact = key
+		}
+		ex.ReplyAudio = nil
+	}
 	tr.Exchange = ex
 	if sendErr == nil {
 		time.Sleep(sinkGrace)
@@ -276,7 +289,7 @@ func redactMedia(req map[string]any) map[string]any {
 	out := make(map[string]any, len(req))
 	for k, v := range req {
 		s, isStr := v.(string)
-		if isStr && (k == "image_base64" || k == "audio_base64") && len(s) > 64 {
+		if isStr && (k == "image_base64" || k == "audio_base64" || k == "file_base64") && len(s) > 64 {
 			out[k] = fmt.Sprintf("<%s omitted: %d base64 characters>", k, len(s))
 			continue
 		}

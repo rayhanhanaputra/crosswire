@@ -6,6 +6,7 @@ package connector
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,7 +30,10 @@ type Input struct {
 	Content     string
 	ImageBase64 string
 	AudioBase64 string
-	Canary      string
+	// FileBase64 carries a document (PDF, ICS, EML); FileType is its MIME type.
+	FileBase64 string
+	FileType   string
+	Canary     string
 }
 
 // Arm selects which of the target's two paths to use.
@@ -67,6 +71,8 @@ func render(tpl, def string, in Input) (map[string]any, error) {
 		"{{source}}", q(in.Source),
 		"{{image_base64}}", in.ImageBase64,
 		"{{audio_base64}}", in.AudioBase64,
+		"{{file_base64}}", in.FileBase64,
+		"{{file_type}}", q(in.FileType),
 		"{{canary}}", q(in.Canary),
 	)
 	var body map[string]any
@@ -89,6 +95,9 @@ func jsonOrQuoted(s string) string {
 // which the operator configured explicitly.
 func Send(ctx context.Context, t model.Target, arm Arm, in Input) (model.Exchange, error) {
 	var ex model.Exchange
+	if t.Transport == "sip" && arm == Perception {
+		return sendSIP(ctx, t, in)
+	}
 	endpoint := t.Endpoint
 	var body map[string]any
 	var err error
@@ -159,6 +168,36 @@ func Send(ctx context.Context, t model.Target, arm Arm, in Input) (model.Exchang
 	ex.Status = resp.StatusCode
 	ex.RawResponse = string(raw)
 	ex.ResponseText, ex.Actions, ex.Perceived = Parse(ex.RawResponse, t.ResponsePath, t.ActionsPath, t.PerceivedPath)
+	return ex, nil
+}
+
+// sendSIP plays the audio artifact into a call. There is no response body
+// to parse: the far end's audio is kept, and the sink is the evidence.
+func sendSIP(ctx context.Context, t model.Target, in Input) (model.Exchange, error) {
+	var ex model.Exchange
+	if in.AudioBase64 == "" {
+		return ex, errors.New("sip transport needs an audio artifact (speech or dtmf adapter)")
+	}
+	wav, err := base64.StdEncoding.DecodeString(in.AudioBase64)
+	if err != nil {
+		return ex, errors.New("audio artifact is not valid base64")
+	}
+	ex.Request = map[string]any{"transport": "sip", "invite": t.Endpoint, "codec": "PCMU/8000", "audio_bytes": len(wav)}
+	start := time.Now()
+	call, err := Dial(ctx, t.SIP, t.Endpoint, wav)
+	ex.DurationMs = int(time.Since(start).Milliseconds())
+	ex.Status = call.Status
+	raw, _ := json.Marshal(call)
+	ex.RawResponse = string(raw)
+	ex.ReplyAudio = call.ReplyAudio
+	if err != nil {
+		ex.Error = err.Error()
+		return ex, err
+	}
+	ex.ResponseText = fmt.Sprintf("call answered (%d %s): played %.1f s, heard %.1f s", call.Status, call.Reason, call.SentSeconds, call.ReceivedSeconds)
+	if call.RemoteHungUp {
+		ex.ResponseText += ", far end hung up"
+	}
 	return ex, nil
 }
 
