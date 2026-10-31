@@ -32,6 +32,7 @@ type perceiveReq struct {
 	AudioBase64 string `json:"audio_base64"`
 	FileBase64  string `json:"file_base64"`
 	FileType    string `json:"file_type"`
+	Session     string `json:"session"`
 }
 
 type spec struct {
@@ -46,9 +47,10 @@ var specs = map[string]spec{
 	"camera-agent":  {7203, perceiveCamera, chatCamera},
 	"expense-agent": {7204, perceiveExpense, chatExpense},
 	"inbox-agent":   {7205, perceiveInbox, chatInbox},
+	"desk-agent":    {7206, perceiveDesk, chatDesk},
 }
 
-const targetNames = "home-agent, voice-agent, camera-agent, expense-agent or inbox-agent"
+const targetNames = "home-agent, voice-agent, camera-agent, expense-agent, inbox-agent or desk-agent"
 
 // Options configures a Server. LLM is injectable so tests can point it at a
 // fake OpenAI-compatible server.
@@ -143,6 +145,7 @@ func (s *Server) handlePerceive(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Message string `json:"message"`
+		Session string `json:"session"`
 	}
 	if err := decodeBody(w, r, &req); err != nil {
 		s.fail(w, err)
@@ -166,6 +169,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	ctx := context.WithValue(r.Context(), confirmedKey{}, true)
+	ctx = context.WithValue(ctx, sessionKey{}, req.Session)
 	res, err := s.spec.chat(ctx, s, req.Message)
 	if err != nil {
 		s.fail(w, err)
@@ -228,6 +232,14 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 // confirmedKey marks a context as coming from /chat, i.e. from the user.
 // A /perceive run never carries it, so it can never confirm a privileged call.
 type confirmedKey struct{}
+
+// sessionKey carries the memory session named by a chat request.
+type sessionKey struct{}
+
+func sessionOf(ctx context.Context) string {
+	v, _ := ctx.Value(sessionKey{}).(string)
+	return v
+}
 
 func confirmed(ctx context.Context) bool {
 	v, _ := ctx.Value(confirmedKey{}).(bool)

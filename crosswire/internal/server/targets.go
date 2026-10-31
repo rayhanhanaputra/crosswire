@@ -154,6 +154,10 @@ func normalizeTarget(t *model.Target) error {
 	if t.DirectEndpoint != "" && !absoluteHTTP(t.DirectEndpoint) {
 		return errors.New("direct_endpoint must be an absolute http(s) URL")
 	}
+	t.TriggerEndpoint = strings.TrimSpace(t.TriggerEndpoint)
+	if t.TriggerEndpoint != "" && !absoluteHTTP(t.TriggerEndpoint) {
+		return errors.New("trigger_endpoint must be an absolute http(s) URL")
+	}
 	t.Method = strings.ToUpper(strings.TrimSpace(t.Method))
 	if t.Method == "" {
 		t.Method = http.MethodPost

@@ -2,7 +2,7 @@
 // reference targets.
 //
 //	crosswire serve  [--listen 127.0.0.1:7117] [--data ~/.crosswire]
-//	crosswire target <home-agent|voice-agent|camera-agent|expense-agent|inbox-agent> [flags]
+//	crosswire target <home-agent|voice-agent|camera-agent|expense-agent|inbox-agent|desk-agent> [flags]
 //	crosswire version
 package main
 

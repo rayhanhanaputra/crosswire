@@ -234,14 +234,34 @@ func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID s
 		ex.ReplyAudio = nil
 	}
 	tr.Exchange = ex
+	// Two-phase trial: the artifact was stored; now the routine request
+	// that makes the agent read it. Findings are judged on the trigger's
+	// response and on every sink event since the first send.
+	judged := ex
+	if sendErr == nil && arm != "direct" && t.TriggerEndpoint != "" {
+		tex, terr := connector.Send(ctx, t, connector.Trigger, enc.Input)
+		if terr != nil && tex.Error == "" {
+			tex.Error = terr.Error()
+		}
+		tex.Request = redactMedia(tex.Request)
+		tr.Trigger = &tex
+		if terr == nil {
+			judged = tex
+			if judged.Perceived == "" {
+				judged.Perceived = ex.Perceived
+			}
+		} else {
+			sendErr = terr
+		}
+	}
 	if sendErr == nil {
 		time.Sleep(sinkGrace)
 	}
 	tr.Sink = e.Sink.Since(cursor, "")
-	tr.Findings = evidence.Match(t.Evidence, canary, ex, tr.Sink)
+	tr.Findings = evidence.Match(t.Evidence, canary, judged, tr.Sink)
 	tr.Hit = evidence.IsHit(tr.Findings)
-	if ex.Perceived != "" && evidence.Carries(tr.Content, canary) {
-		d := evidence.Carries(ex.Perceived, canary)
+	if judged.Perceived != "" && evidence.Carries(tr.Content, canary) {
+		d := evidence.Carries(judged.Perceived, canary)
 		tr.Delivered = &d
 	}
 	return tr

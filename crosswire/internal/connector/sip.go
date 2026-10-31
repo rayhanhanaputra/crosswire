@@ -130,9 +130,15 @@ func Dial(ctx context.Context, cfg model.SIPConfig, uri string, wav []byte) (Cal
 	mctx, mcancel := context.WithTimeout(ctx, total)
 	defer mcancel()
 
-	// Far-end BYE ends the media phase early.
+	// Far-end BYE ends the media phase early. The in-call reader must be
+	// gone before our own BYE transaction reads the socket, or it swallows
+	// the 200 and the BYE is retransmitted.
 	byeCh := make(chan struct{}, 1)
-	go d.serveDuringCall(mctx, byeCh)
+	serveDone := make(chan struct{})
+	go func() {
+		defer close(serveDone)
+		d.serveDuringCall(mctx, byeCh)
+	}()
 
 	var received []byte
 	recvDone := make(chan struct{})
@@ -149,6 +155,7 @@ func Dial(ctx context.Context, cfg model.SIPConfig, uri string, wav []byte) (Cal
 	}
 	mcancel()
 	<-recvDone
+	<-serveDone
 	call.ReceivedSeconds = float64(len(received)) / 8000
 	if len(received) > 0 {
 		call.ReplyAudio = signal.FromMuLaw8k(received)

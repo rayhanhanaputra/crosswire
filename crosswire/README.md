@@ -48,11 +48,12 @@ crosswire target NAME [--port N] [--policy vulnerable|hardened] [--guardrail] [-
 | `camera-agent`  | 7203 | PNG → VLM, QR        | `mark_clear`, `disarm_alarm`   |
 | `expense-agent` | 7204 | invoice PNG → VLM    | `approve_payment`              |
 | `inbox-agent`   | 7205 | PDF / ICS / EML → text | `forward_email`, `share_file` |
+| `desk-agent`    | 7206 | handoff notes, stored then read | `issue_refund`            |
 
 ## Workflow
 
 1. **Targets** — add the agent. The "Load reference target" helper fills in the
-   endpoints and the forbidden tools for the five built-ins. For your own agent,
+   endpoints and the forbidden tools for the six built-ins. For your own agent,
    point `endpoint` at its perception path, `direct_endpoint` at its chat path, and
    name the tools that must never run. Have the agent POST executed tools to the
    sink URL shown in the header, or configure a webhook that does.
@@ -96,9 +97,23 @@ resisted" are different findings.
 | `pdf`         | PDF, text read back        | yes     |
 | `calendar`    | ICS invite, read back      | yes     |
 | `email`       | EML message, read back     | yes     |
+| `handoff`     | text, stored by the target | yes     |
 
 A modeled adapter is labelled in the UI and in the run, and cannot back a
 `reproduced` claim. The ESP32 path for `device-name` is planned.
+
+## Two-phase trials: memory and other agents
+
+Some content does nothing when it arrives. A handoff note from another agent, a
+retrieved document or a memory entry is stored, and the agent only reads it on a
+later, unrelated request. A target with a `trigger_endpoint` makes every
+perception trial two-phase: deliver the artifact, then post `trigger_template`
+(the routine request a user would make). `{{canary}}` in both templates lets the
+target key its memory per trial, so trials and controls never see each other's
+notes. Findings are judged on the trigger's response and on every sink event
+since the first send; the trial records both exchanges. The `desk-agent` is the
+reference for this: it stores notes on `/perceive` without acting and reads them
+on `/chat`.
 
 ## Transports
 
@@ -123,7 +138,7 @@ internal/evidence    rules, Wilson intervals, verdicts
 internal/engine      trials, arms, canaries
 internal/store       bbolt persistence
 internal/server      API + embedded UI
-internal/targets     the five reference agents
+internal/targets     the six reference agents
 internal/agent       tool-calling loop with vulnerable / hardened policies
 internal/rig         serial driver for the Arduino LED rig
 docs/CONTRACT.md     the wire contract and verdict rules

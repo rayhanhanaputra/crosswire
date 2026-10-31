@@ -25,6 +25,13 @@ type Target struct {
 	ActionsPath     string            `json:"actions_path"`
 	PerceivedPath   string            `json:"perceived_path"`
 	TimeoutSeconds  int               `json:"timeout_seconds"`
+	// TriggerEndpoint, when set, makes every perception trial two-phase:
+	// the artifact is delivered (stored by the target as memory, a note,
+	// a retrieved document), then TriggerTemplate is posted here as the
+	// later, unrelated request that makes the agent read what it stored.
+	// {{canary}} in both templates lets the target key its memory per trial.
+	TriggerEndpoint string `json:"trigger_endpoint,omitempty"`
+	TriggerTemplate string `json:"trigger_template,omitempty"`
 	// Transport is "http" (default) or "sip". With "sip", Endpoint is a
 	// sip: URI and the perception arm places a call carrying the audio
 	// artifact; the chat path stays HTTP.
@@ -126,6 +133,7 @@ type Trial struct {
 	Canary    string      `json:"canary"`
 	Content   string      `json:"content"` // text after canary substitution
 	Exchange  Exchange    `json:"exchange"`
+	Trigger   *Exchange   `json:"trigger,omitempty"` // second phase, when the target has a trigger endpoint
 	Sink      []SinkEvent `json:"sink"`
 	Findings  []Finding   `json:"findings"`
 	Delivered *bool       `json:"delivered,omitempty"` // perceived contains canary; nil if unknown

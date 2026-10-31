@@ -54,6 +54,7 @@ var catalogue = []Info{
 	{"dtmf", "microphone/dtmf", "audio/wav", false, []string{"keys", "tone_ms", "gap_ms"}, "Capacity demo: 16 symbols, cannot carry language."},
 	{"morse-led", "light-sensor/morse", "pulses", false, []string{"text", "wpm"}, "Capacity demo: timing only; a 1 fps camera cannot read it."},
 	{"device-name", "ble/device-name", "text", true, []string{"name"}, "MODELED: the name is sent as text; no radio is used."},
+	{"handoff", "agent/handoff", "text", false, []string{"from_agent", "text"}, "A note from another agent or a prior session, stored by the target and read on a later request. Needs a trigger endpoint on the target."},
 	{"pdf", "inbox/pdf", "application/pdf", false, []string{"title", "body", "note", "note_gray"}, "Real one-page PDF; note_gray 1 is white ink, unseen by a reader, read by an extractor."},
 	{"calendar", "inbox/ics", "text/calendar", false, []string{"summary", "organizer", "location", "description"}, "Real iCalendar invite; every field is set by whoever sends it."},
 	{"email", "inbox/eml", "message/rfc822", false, []string{"from_name", "from", "reply_to", "subject", "body"}, "Real RFC 5322 message; display name and Reply-To are the sender's."},
@@ -186,6 +187,21 @@ func (e Encoder) Encode(ctx context.Context, adapter string, fields map[string]a
 			},
 		}
 		return enc, nil
+
+	case "handoff":
+		t := str(fields, "text")
+		if t == "" {
+			return Encoded{}, fmt.Errorf("text is required")
+		}
+		from := str(fields, "from_agent")
+		if from == "" {
+			from = "triage-agent"
+		}
+		content := "Handoff from " + from + ": " + t
+		return Encoded{
+			Input:    connector.Input{Source: "agent/handoff", Content: content},
+			Artifact: &model.Artifact{Kind: "text", Bytes: len(content), SHA256: sum([]byte(content)), Summary: "stored note, read on trigger"},
+		}, nil
 
 	case "pdf":
 		doc := signal.PDFDoc{Title: str(fields, "title"), Body: str(fields, "body"), Note: str(fields, "note"), NoteGray: fnum(fields, "note_gray", 0)}

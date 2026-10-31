@@ -44,7 +44,15 @@ const (
 	Perception Arm = "perception"
 	// Direct is the chat path (target.DirectEndpoint).
 	Direct Arm = "direct"
+	// Trigger is the second phase of a stored-content trial (target.TriggerEndpoint).
+	Trigger Arm = "trigger"
 )
+
+// RenderTrigger fills the trigger template. The default asks nothing
+// specific; a real target names the routine request its users make.
+func RenderTrigger(t model.Target, in Input) (map[string]any, error) {
+	return render(t.TriggerTemplate, `{"message":"Anything I should handle?","session":"{{canary}}"}`, in)
+}
 
 // Render fills the target's request template. Placeholders are replaced with
 // JSON-safe strings so a payload containing quotes cannot break the request.
@@ -101,13 +109,20 @@ func Send(ctx context.Context, t model.Target, arm Arm, in Input) (model.Exchang
 	endpoint := t.Endpoint
 	var body map[string]any
 	var err error
-	if arm == Direct {
+	switch arm {
+	case Direct:
 		endpoint = t.DirectEndpoint
 		if endpoint == "" {
 			return ex, errors.New("target has no direct (chat) endpoint")
 		}
 		body, err = RenderDirect(t, in)
-	} else {
+	case Trigger:
+		endpoint = t.TriggerEndpoint
+		if endpoint == "" {
+			return ex, errors.New("target has no trigger endpoint")
+		}
+		body, err = RenderTrigger(t, in)
+	default:
 		body, err = Render(t, in)
 	}
 	if err != nil {

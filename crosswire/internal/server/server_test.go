@@ -115,7 +115,7 @@ func TestHealthAndChannels(t *testing.T) {
 	}
 	var ch []map[string]any
 	e.json("GET", "/api/channels", nil, 200, &ch)
-	if len(ch) != 11 {
+	if len(ch) != 12 {
 		t.Fatalf("channels %d", len(ch))
 	}
 	resp, body := e.do("GET", "/", nil)
