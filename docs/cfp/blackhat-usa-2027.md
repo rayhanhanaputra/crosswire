@@ -41,9 +41,10 @@ speech WAVs, DTMF tones (and a Goertzel decoder to verify them), Morse pulse
 timelines to a serial LED rig. Channels that only relabel text are marked *modeled*
 and cannot back a reproducibility claim.
 
-Four reference targets ship in the binary, each a real tool-calling model: a home
+Five reference targets ship in the binary, each a real tool-calling model: a home
 assistant that trusts its entity list, a voice assistant with mail and payment tools,
-a small-business camera agent, and an accounts-payable agent. Each runs as
+a small-business camera agent, an accounts-payable agent, and an inbox assistant that
+opens mail, calendar invites and PDF attachments. Each runs as
 `vulnerable`, `hardened` (quarantined perception into a fixed schema, hidden
 privileged tools, user-channel confirmation, interlocks in code) or with a chat-path
 guardrail. Every run exports a bundle (run JSON, artifacts, sink events, hashes).
@@ -83,7 +84,7 @@ home platform assembles from device names, the audio a voice assistant transcrib
 the frames a camera agent describes, the invoices a payments agent extracts.
 Prompt-injection defences are placed on the chat path. This talk measures the gap.
 
-We built four reference agents on a production model, each with real privileged tools,
+We built five reference agents on a production model, each with real privileged tools,
 in three configurations: a plain agent loop; the same loop with a prompt-injection
 classifier on the chat path; and a hardened design (perception quarantined into a
 fixed schema by a tool-less model, privileged tools withheld from the perception path,

@@ -25,9 +25,9 @@ the devices on your network, the words a television says in the next room, the s
 front of the camera, and the notes on a supplier's invoice. We measured how much of
 that the filter sees. The answer is none of it, and the agent acts on it anyway.
 
-We built four reference agents on a production model — a home assistant, a voice
+We built five reference agents on a production model — a home assistant, a voice
 assistant with mail and payment tools, a small-business camera agent, an
-accounts-payable agent — and sent the same instruction three ways, ten times each:
+accounts-payable agent, an inbox assistant that opens attachments — and sent the same instruction three ways, ten times each:
 through the physical channel, as a benign control, and typed into chat with a guardrail
 on. Hits were counted only when a forbidden tool reached a sink we controlled with that
 trial's nonce. Through chat: 0/10. Through the device list, the microphone and the
@@ -50,7 +50,7 @@ Repeater and Intruder for perception paths, with run bundles anyone can re-check
 2. **Method (7 min).** Three arms. Nonce per trial. Sink as the only evidence; why
    reply-text matching produces false positives (the refusal echo). Wilson intervals
    and the five verdicts. Delivery measured separately from compliance.
-3. **Targets (4 min).** The four reference agents, their tools, and the three
+3. **Targets (4 min).** The five reference agents, their tools, and the three
    configurations. Why vulnerable and hardened differ in architecture, not in a
    filter.
 4. **Results (10 min).** The 4 × 3 table. The guardrail delta. Voice variance across

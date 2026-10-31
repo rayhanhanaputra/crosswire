@@ -1,17 +1,54 @@
 {
   "v": 4,
-  "createdOnFiles": {"v": 1, "at": "2026-10-31T09:10:00Z"},
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-31T09:10:00Z"
+  },
   "lists": "css",
   "title": "Crosswire: Signal-to-Prompt Injection",
-  "order": ["cover", "claim", "paths", "prior", "method", "targets", "artifacts", "results", "gap", "control", "hardened", "delivery", "capacity", "tool", "limits", "defenses", "close"],
+  "order": [
+    "cover",
+    "claim",
+    "paths",
+    "prior",
+    "coverage",
+    "method",
+    "targets",
+    "artifacts",
+    "results",
+    "gap",
+    "control",
+    "hardened",
+    "delivery",
+    "capacity",
+    "tool",
+    "limits",
+    "defenses",
+    "close"
+  ],
   "sections": {
-    "s1": {"description": "The claim: the guardrail and the agent read different representations.", "start": "cover"},
-    "s2": {"description": "How it was measured: three arms, canaries, a sink, intervals.", "start": "method"},
-    "s3": {"description": "What the numbers showed, including the oracle the control arm caught.", "start": "results"},
-    "s4": {"description": "The tool, its limits, and what defenders should change.", "start": "tool"}
+    "s1": {
+      "description": "The claim: the guardrail and the agent read different representations.",
+      "start": "cover"
+    },
+    "s2": {
+      "description": "How it was measured: three arms, canaries, a sink, intervals.",
+      "start": "method"
+    },
+    "s3": {
+      "description": "What the numbers showed, including the oracle the control arm caught.",
+      "start": "results"
+    },
+    "s4": {
+      "description": "The tool, its limits, and what defenders should change.",
+      "start": "tool"
+    }
   },
   "faces": {
-    "schibsted-grotesk": {"family": "Schibsted Grotesk", "href": "https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700&display=swap"}
+    "schibsted-grotesk": {
+      "family": "Schibsted Grotesk",
+      "href": "https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700&display=swap"
+    }
   },
   "designSystems": []
 }

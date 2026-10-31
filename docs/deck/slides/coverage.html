@@ -1,0 +1,16 @@
+<section id="coverage" data-transition="fade" style="background:#F1F2EE;color:#1B2420;font-family:'Schibsted Grotesk', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<h2 style="font-size:72px;font-weight:700;line-height:1.05;letter-spacing:-1px">What Gets Tested</h2>
+<table style="font-size:30px;color:#1B2420">
+<tr><th style="width:38%;text-align:left;font-weight:500;color:#6B7069">what the agent reads</th><th style="width:24%;text-align:left;font-weight:500;color:#6B7069">open tools</th><th style="width:19%;text-align:left;font-weight:500;color:#6B7069">vendor tools</th><th style="width:19%;text-align:left;font-weight:500;color:#6B7069">Crosswire</th></tr>
+<tr><td>chat text</td><td>garak, PyRIT, promptfoo</td><td>many</td><td>direct arm</td></tr>
+<tr><td>image or audio file sent to an API</td><td>PyRIT, promptfoo</td><td>some</td><td>yes</td></tr>
+<tr><td>a live phone call</td><td style="color:#C8451F">none</td><td>closed products</td><td>SIP, new</td></tr>
+<tr><td>PDF, calendar invite, email</td><td style="color:#C8451F">none</td><td style="color:#C8451F">none</td><td>yes, new</td></tr>
+<tr><td>device names, protocol fields</td><td style="color:#C8451F">none</td><td style="color:#C8451F">none</td><td>modeled</td></tr>
+<tr><td>a computer-use agent’s screen</td><td>one benchmark</td><td style="color:#C8451F">none</td><td style="color:#C8451F">no</td></tr>
+<tr><td>camera, radio or sensor in the room</td><td style="color:#C8451F">none</td><td style="color:#C8451F">none</td><td>LED rig only</td></tr>
+<tr><td>memory and other agents</td><td>benchmarks</td><td style="color:#C8451F">none</td><td style="color:#C8451F">no</td></tr>
+</table>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6B7069">Surveyed 2026-10-31: PyRIT and promptfoo docs, VPI-Bench, AgentDojo, vendor pages. Vendor claims not verified.</p>
+<aside>Read the first column as the list of things an agent perceives, then the second: open tooling stops at the second row, a file posted to an API. Vendors sell phone-call testing as closed products with numbers nobody can check. Everything below that is empty. This deck covers rows two to four and measures the fifth as modeled text; the last three rows are open problems, and the LED rig only shows that one of them carries too little to matter.</aside>
+</section>
