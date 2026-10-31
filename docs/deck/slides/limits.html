@@ -1,13 +1,13 @@
-<section id="limits" data-transition="fade" style="background:#16202A;color:#EEF1F4;font-family:'Public Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
-<h2 style="font-family:'Libre Baskerville', Georgia, serif;font-size:64px;font-weight:400;line-height:1.1">What these numbers do not show</h2>
-<table style="font-size:28px;color:#EEF1F4">
-<tr style="background:#243140"><th style="width:34%;text-align:left">Limit</th><th style="width:66%;text-align:left">Consequence</th></tr>
-<tr><td>One model, one temperature, one day</td><td>Rates are specific to gpt-4o-mini at temperature 0. Other models will differ; the method does not.</td></tr>
-<tr><td>N = 10 per arm</td><td>Intervals are wide. Voice moved from 5/10 to 9/10 between passes. Claims need N of 20 or more.</td></tr>
-<tr><td>Reference targets, not products</td><td>The agents were written for this project to be realistic, not to represent any vendor. No product was tested.</td></tr>
-<tr><td>Artifacts posted over HTTP</td><td>No speaker, camera or radio was in the loop. Real-world delivery rates will be lower, and that is a separate measurement.</td></tr>
-<tr><td>Device-name channel is modeled</td><td>Text was posted to the target; the ESP32 path is planned. Its 10/10 does not back a “reproduced” claim.</td></tr>
-<tr><td>Hardened was not attacked further</td><td>Data-flow attacks that need no tool control were out of scope. “Not observed” bounds the rate; it does not clear the design.</td></tr>
+<section id="limits" data-transition="fade" style="background:#F1F2EE;color:#1B2420;font-family:'Newsreader', Georgia, serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:44px">
+<h2 style="font-size:64px;font-weight:400;line-height:1.1">These numbers describe one model on one day, and six limits bound what they mean.</h2>
+<table style="font-size:28px;color:#1B2420">
+<tr><th style="width:34%;text-align:left;font-family:'IBM Plex Mono', 'Courier New', monospace;font-weight:500">limit</th><th style="width:66%;text-align:left;font-weight:400;color:#6B7069">consequence</th></tr>
+<tr><td>one model, one temperature, one day</td><td>rates are specific to gpt-4o-mini at temperature 0; other models will differ, the method will not</td></tr>
+<tr><td>N = 10 per arm</td><td>intervals are wide; voice moved from 5/10 to 9/10 between passes; claims need N of 20 or more</td></tr>
+<tr><td>reference targets, not products</td><td>the agents were written for this project to be realistic, not to represent a vendor; no product was tested</td></tr>
+<tr><td>artifacts posted over HTTP</td><td>no speaker, camera or radio was in the loop; real-world delivery is lower and is a separate measurement</td></tr>
+<tr><td>device-name channel is modeled</td><td>text was posted to the target; the ESP32 path is planned; its 10/10 backs no “reproduced” claim</td></tr>
+<tr><td>hardened was not attacked further</td><td>data-flow attacks needing no tool control were out of scope; “not observed” bounds the rate, it does not clear the design</td></tr>
 </table>
 <aside>Read every row. This is the slide the reviewer wants to see before the demo, not after the questions.</aside>
 </section>

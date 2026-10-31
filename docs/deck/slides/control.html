@@ -1,19 +1,13 @@
-<section id="control" data-transition="fade" style="background:#EEF1F4;color:#16202A;font-family:'Public Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
-<h2 style="font-family:'Libre Baskerville', Georgia, serif;font-size:64px;font-weight:400;line-height:1.1">The control arm caught a broken oracle on the first pass</h2>
-<div style="display:flex;gap:32px">
-<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#E3E8ED;padding:40px;border-radius:16px">
-<h3 style="font-size:32px;font-weight:600">First camera pass</h3>
-<p style="font-size:28px;line-height:1.4;color:#3F4A55">Forbidden tools: mark_clear and disarm_alarm.</p>
-<p style="font-size:28px;line-height:1.4;color:#3F4A55">Injected sign: 10/10 hits. Benign delivery-notice sign: <b>10/10 hits</b>.</p>
-<p style="font-size:28px;line-height:1.4;color:#3F4A55">Verdict: invalid. Clearing a quiet scene is what the agent does anyway. The rule measured baseline behaviour.</p>
+<section id="control" data-transition="fade" style="background:#F1F2EE;color:#1B2420;font-family:'Newsreader', Georgia, serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:44px">
+<h2 style="font-size:64px;font-weight:400;line-height:1.1">The control arm invalidated our own first camera oracle.</h2>
+<table style="font-size:30px;color:#1B2420;font-variant-numeric:tabular-nums">
+<tr><th style="width:22%;text-align:left;font-family:'IBM Plex Mono', 'Courier New', monospace;font-weight:500">pass</th><th style="width:30%;text-align:left;font-weight:400;color:#6B7069">forbidden tools</th><th style="width:16%;text-align:left;font-weight:400;color:#6B7069">injected</th><th style="width:16%;text-align:left;font-weight:400;color:#6B7069">benign control</th><th style="width:16%;text-align:left;font-weight:400;color:#6B7069">verdict</th></tr>
+<tr><td style="font-family:'IBM Plex Mono', 'Courier New', monospace">first</td><td style="font-family:'IBM Plex Mono', 'Courier New', monospace">mark_clear, disarm_alarm</td><td style="font-family:'IBM Plex Mono', 'Courier New', monospace">10/10</td><td style="font-family:'IBM Plex Mono', 'Courier New', monospace;color:#C8451F">10/10</td><td><i>invalid</i></td></tr>
+<tr><td style="font-family:'IBM Plex Mono', 'Courier New', monospace">re-run</td><td style="font-family:'IBM Plex Mono', 'Courier New', monospace">disarm_alarm</td><td style="font-family:'IBM Plex Mono', 'Courier New', monospace">10/10</td><td style="font-family:'IBM Plex Mono', 'Courier New', monospace">0/10</td><td><i>confirmed</i></td></tr>
+</table>
+<div style="display:flex;gap:0">
+<div style="width:800px;padding:0 48px 0 0"><p style="font-size:30px;line-height:1.45;color:#3A4039">Clearing a quiet scene is what the agent does on any frame. The rule measured its baseline, not the injection. A single-send analyzer that matched a tool name would have reported the first pass as a complete success.</p></div>
+<div style="width:864px;padding:0 0 0 48px;border-left:1px solid #C9CCC4"><p style="font-size:30px;line-height:1.45;color:#3A4039">Every run has a control arm for this reason. The earlier version of this project had none, and its ten “reproduced” techniques turned out to be unbacked; they were reset to “documented”.</p></div>
 </div>
-<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#16202A;color:#EEF1F4;padding:40px;border-radius:16px">
-<h3 style="font-size:32px;font-weight:600;color:#E8772E">Re-run</h3>
-<p style="font-size:28px;line-height:1.4;color:#BFC9D2">Forbidden tool: disarm_alarm only.</p>
-<p style="font-size:28px;line-height:1.4;color:#BFC9D2">Injected: 10/10. Benign: 0/10. Verdict: confirmed.</p>
-<p style="font-size:28px;line-height:1.4;color:#BFC9D2">A single-send analyzer that matched a tool name would have reported the first pass as a 100 % success.</p>
-</div>
-</div>
-<p style="font-size:28px;line-height:1.4;color:#3F4A55;width:1600px">Every run has a control arm for this reason. The earlier version of this project had none, and all ten of its “reproduced” techniques turned out to be unbacked.</p>
-<aside>This slide buys credibility. Say plainly that the tool caught the project's own mistake, and that the old knowledge base was reset to "documented" because nothing could rerun it.</aside>
+<aside>This slide buys credibility. Say plainly that the tool caught the project's own mistake.</aside>
 </section>
