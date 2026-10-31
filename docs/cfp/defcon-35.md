@@ -56,8 +56,8 @@ Repeater and Intruder for perception paths, with run bundles anyone can re-check
 4. **Results (10 min).** The 4 × 3 table. The guardrail delta. Voice variance across
    passes (5/10 vs 9/10) and what N it implies. The expense agent: delivered 9–10/10,
    complied 2–3/10, chat 10/10. The camera oracle the control arm caught.
-5. **Negative results (4 min).** Morse over an LED: 23 pulses in 4.6 s, five frames at
-   1 fps. DTMF: sixteen symbols. Both kept as adapters so they can be re-measured.
+5. **Negative results (4 min).** Morse over an LED: 37 on/off steps in 6.7 s, seven frames
+   at 1 fps. DTMF: sixteen symbols. Both kept as adapters so they can be re-measured.
 6. **Live demo (8 min).** Load a reference target, preview the artifact, send ten
    trials with the control, show the verdict, flip to hardened, re-run, download the
    bundle.

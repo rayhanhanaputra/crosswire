@@ -1,11 +1,21 @@
-<section id="defenses" data-transition="fade" style="background:#F1F2EE;color:#1B2420;font-family:'Schibsted Grotesk', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;justify-content:space-between">
+<section id="defenses" data-transition="fade" style="background:#F1F2EE;color:#1B2420;font-family:'Schibsted Grotesk', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:16px">
 <h2 style="font-size:72px;font-weight:700;line-height:1.05;letter-spacing:-1px">Defenses</h2>
-<ol style="font-size:44px;line-height:1.45;font-weight:500;width:1500px">
-<li>Put the guardrail after perception.</li>
-<li>Quarantine perceived content into a schema.</li>
-<li>Confirm privileged actions on the user channel.</li>
-<li>Enforce interlocks in code.</li>
-</ol>
-<p style="font-size:30px;line-height:1.4;color:#3A4039;width:1500px">Together, the hardened build. Then measure it: three arms, a control, twenty repeats, a sink you own.</p>
-<aside>Four moves, each measured together as the hardened reference target, so the audience can read the code. The guardrail inspects the transcript, the extracted text, the entity block, the representation the model acts on. A tool-less model extracts a fixed structure so the privileged model never sees free text from a sensor. Unlocking, disarming, paying and sending need a flag only a user turn can set. The account must match the vendor record in the tool handler, whatever the model asked. End on the method: the ask is that people measure, not that they trust this deck.</aside>
+<p style="font-size:30px;line-height:1.4;color:#3A4039;width:1500px">Four moves, measured together as the hardened build: 0 hits in 40 trials.</p>
+<!-- Chat 0,0,256,120  Sensor 0,520,256,120  Extractor 352,520,256,120  Guardrail 704,0,256,640  Agent 1056,0,256,640  Handler 1408,260,256,120 -->
+<div style="position:relative;width:1664px;height:640px">
+<div style="position:absolute;left:0;top:0;width:256px;height:120px;border:2px solid #1B2420;display:flex;flex-direction:column;justify-content:center;padding:0 20px;gap:2px"><p style="font-size:28px;font-weight:700">User chat</p><p style="font-size:24px;color:#3A4039">the only trusted turn</p></div>
+<div style="position:absolute;left:0;top:520px;width:256px;height:120px;border:2px solid #1B2420;display:flex;flex-direction:column;justify-content:center;padding:0 20px;gap:2px"><p style="font-size:28px;font-weight:700">Sensor</p><p style="font-size:24px;color:#3A4039">name, audio, frame</p></div>
+<div style="position:absolute;left:352px;top:520px;width:256px;height:120px;border:3px solid #C8451F;display:flex;flex-direction:column;justify-content:center;padding:0 20px;gap:2px"><p style="font-size:28px;font-weight:700">1 Extractor</p><p style="font-size:24px;color:#3A4039">no tools, fixed schema</p></div>
+<div style="position:absolute;left:704px;top:0;width:256px;height:640px;border:3px solid #3A5F7D;display:flex;flex-direction:column;justify-content:center;padding:0 20px;gap:2px"><p style="font-size:28px;font-weight:700;color:#3A5F7D">2 Guardrail</p><p style="font-size:24px;color:#3A4039">reads the schema and the chat</p></div>
+<div style="position:absolute;left:1056px;top:0;width:256px;height:640px;background:#1B2420;color:#F1F2EE;display:flex;flex-direction:column;justify-content:center;padding:0 20px;gap:2px"><p style="font-size:28px;font-weight:700">3 Agent</p><p style="font-size:24px;color:#B9BFB6">acts only with a flag the user turn set</p></div>
+<div style="position:absolute;left:1408px;top:260px;width:256px;height:120px;background:#C8451F;color:#F1F2EE;display:flex;flex-direction:column;justify-content:center;padding:0 20px;gap:2px"><p style="font-size:28px;font-weight:700">4 Handler</p><p style="font-size:24px">interlock in code</p></div>
+<x-connector x1="256" y1="60" x2="704" y2="60" style="color:#3A5F7D;border-width:3px"></x-connector>
+<x-connector x1="256" y1="580" x2="352" y2="580" style="color:#1B2420;border-width:3px"></x-connector>
+<x-connector x1="608" y1="580" x2="704" y2="580" style="color:#1B2420;border-width:3px"></x-connector>
+<x-connector x1="960" y1="320" x2="1056" y2="320" style="color:#1B2420;border-width:3px"></x-connector>
+<x-connector x1="1312" y1="320" x2="1408" y2="320" style="color:#1B2420;border-width:3px"></x-connector>
+<p style="position:absolute;left:0;top:130px;width:256px;font-size:24px;color:#3A5F7D">sets the confirm flag</p>
+<p style="position:absolute;left:352px;top:450px;width:256px;font-size:24px;color:#C8451F">free text stops here</p>
+<p style="position:absolute;left:1408px;top:390px;width:256px;font-size:24px;color:#3A4039">account must match the vendor record</p>
+<aside>Four moves, each measured together as the hardened reference target, so the audience can read the code. One: a tool-less model extracts a fixed structure, so the privileged model never sees free text from a sensor. Two: the guardrail inspects the representation the model acts on, the schema and the chat, not the raw sensor. Three: unlocking, disarming, paying and sending need a flag only a user turn can set. Four: the account must match the vendor record in the tool handler, whatever the model asked. End on the method: the ask is that people measure, not that they trust this deck.</aside>
 </section>

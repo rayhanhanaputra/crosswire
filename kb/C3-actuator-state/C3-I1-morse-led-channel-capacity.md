@@ -54,8 +54,9 @@ the test measures whether the perception path can carry the symbol rate.
 
 ## Payload / encoding
 
-`UNLOCK` at 12 wpm is 23 pulses over about 4.6 s; the shortest element is 100 ms. A
-camera agent sampling at 1 fps sees at most 5 frames of it.
+`UNLOCK` at 12 wpm is 37 on/off steps over 6.7 s (the adapter's own preview: 37 pulses,
+100 ms unit); the shortest element is 100 ms. A camera agent sampling at 1 fps sees at
+most 7 frames of it.
 
 ## Delivery / transport
 
