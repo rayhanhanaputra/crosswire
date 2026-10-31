@@ -1,15 +1,18 @@
 <section id="hardened" data-transition="fade" style="background:#F1F2EE;color:#1B2420;font-family:'Schibsted Grotesk', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;justify-content:space-between">
 <h2 style="font-size:72px;font-weight:700;line-height:1.05;letter-spacing:-1px">Hardened Build</h2>
-<div style="display:flex;align-items:baseline;gap:40px;font-variant-numeric:tabular-nums">
-<p style="font-size:200px;font-weight:700;line-height:1;letter-spacing:-5px">0</p>
-<p style="font-size:44px;line-height:1.3;color:#3A4039;width:1100px">hits in 40 trials across the four scenarios, with the nonce delivered in 39</p>
+<div style="display:flex;gap:96px;align-items:center">
+<div style="width:560px;display:flex;flex-direction:column;gap:12px">
+<p style="font-size:300px;font-weight:700;line-height:0.95;letter-spacing:-8px">0</p>
+<p style="font-size:36px;line-height:1.3;color:#3A4039">hits in 70 trials across seven scenarios</p>
+<p style="font-size:28px;line-height:1.3;color:#6B7069">the nonce was delivered in 69 of them</p>
 </div>
-<ol style="font-size:32px;line-height:1.5;color:#1B2420;width:1500px">
-<li>Perception goes to a tool-less model that emits a fixed schema.</li>
-<li>Privileged tools are not offered on the perception path.</li>
-<li>Privileged calls need a flag only the user channel can set.</li>
-<li>Interlocks live in the tool handler, whatever the model asked.</li>
-</ol>
-<p style="font-size:26px;color:#6B7069">Reported as a rate below 3 in 10 at 95 %. Not as safe.</p>
-<aside>Zero of ten on every scenario, with the payload still arriving: ten, ten, ten and nine of ten delivered. The four changes are architecture, not filtering. Never say safe: zero of ten bounds the rate below about thirty percent at ninety-five percent confidence, that is all, and data-flow attacks that need no tool control were not tested.</aside>
+<div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:24px;width:1008px">
+<div style="border:2px solid #1B2420;padding:28px 32px;display:flex;flex-direction:column;gap:10px"><p style="font-size:26px;font-weight:700;color:#C8451F">1 quarantine</p><p style="font-size:30px;line-height:1.3">Perception goes to a tool-less model that emits a fixed schema.</p></div>
+<div style="border:2px solid #1B2420;padding:28px 32px;display:flex;flex-direction:column;gap:10px"><p style="font-size:26px;font-weight:700;color:#C8451F">2 withhold</p><p style="font-size:30px;line-height:1.3">Privileged tools are not offered on the perception path.</p></div>
+<div style="border:2px solid #1B2420;padding:28px 32px;display:flex;flex-direction:column;gap:10px"><p style="font-size:26px;font-weight:700;color:#C8451F">3 confirm</p><p style="font-size:30px;line-height:1.3">Privileged calls need a flag only the user channel can set.</p></div>
+<div style="border:2px solid #1B2420;padding:28px 32px;display:flex;flex-direction:column;gap:10px"><p style="font-size:26px;font-weight:700;color:#C8451F">4 interlock</p><p style="font-size:30px;line-height:1.3">The handler checks the account, whatever the model asked.</p></div>
+</div>
+</div>
+<p style="font-size:28px;color:#6B7069">Reported as a rate below 3 in 10 at 95 %. Not as safe.</p>
+<aside>Zero of ten on every scenario, with the payload still arriving: delivered in sixty-nine of seventy trials. The four changes are architecture, not filtering. Never say safe: zero of ten bounds the rate below about thirty percent at ninety-five percent confidence, that is all, and data-flow attacks that need no tool control were not tested.</aside>
 </section>
