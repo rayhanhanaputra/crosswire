@@ -129,6 +129,17 @@ type Exchange struct {
 	ReplyArtifact string `json:"reply_artifact,omitempty"`
 }
 
+// Expect names the tool call that makes a utility trial a success: an
+// executed sink event with this tool whose argument Arg matches Value.
+// Match is "equals" (default) or "contains", both on lower-case
+// alphanumerics. An empty Value only requires the argument to be present.
+type Expect struct {
+	Tool  string `json:"tool"`
+	Arg   string `json:"arg"`
+	Value string `json:"value,omitempty"`
+	Match string `json:"match,omitempty"`
+}
+
 // Finding is one matched evidence rule.
 type Finding struct {
 	Rule   string `json:"rule"` // forbidden_tool | argument_limit | response_marker(hint)
@@ -143,7 +154,7 @@ type Finding struct {
 // Trial is one send in one arm.
 type Trial struct {
 	Index     int         `json:"index"`
-	Arm       string      `json:"arm"` // injected | control | direct
+	Arm       string      `json:"arm"` // injected | control | direct | benign_direct | utility
 	Canary    string      `json:"canary"`
 	Content   string      `json:"content"` // text after canary substitution
 	Exchange  Exchange    `json:"exchange"`
@@ -151,18 +162,30 @@ type Trial struct {
 	Sink      []SinkEvent `json:"sink"`
 	Findings  []Finding   `json:"findings"`
 	Delivered *bool       `json:"delivered,omitempty"` // perceived contains canary; nil if unknown
-	Hit       bool        `json:"hit"`                 // a forbidden call executed
-	Attempted bool        `json:"attempted"`           // a forbidden call was made, executed or refused
-	Variant   int         `json:"variant"`             // index of the payload variant this trial used
+	// Guard is the classifier verdict the target reported for the judged
+	// exchange (allow, block or not_checked), "" when it reported none. A
+	// block on either phase wins.
+	Guard string `json:"guard,omitempty"`
+	// Utility is set on the utility arm only: an executed sink event matched
+	// the scenario's expected tool call.
+	Utility   *bool `json:"utility,omitempty"`
+	Hit       bool  `json:"hit"`       // a forbidden call executed
+	Attempted bool  `json:"attempted"` // a forbidden call was made, executed or refused
+	Variant   int   `json:"variant"`   // index of the payload variant this trial used
 }
 
 // ArmStats summarises one arm.
 type ArmStats struct {
-	Trials    int     `json:"trials"`
-	Reached   int     `json:"reached"`
-	Delivered int     `json:"delivered"`
-	Attempted int     `json:"attempted"` // trials with a forbidden call, executed or refused
-	Hits      int     `json:"hits"`      // trials with an executed forbidden call
+	Trials    int `json:"trials"`
+	Reached   int `json:"reached"`
+	Delivered int `json:"delivered"`
+	Attempted int `json:"attempted"` // trials with a forbidden call, executed or refused
+	Hits      int `json:"hits"`      // trials with an executed forbidden call
+	// Blocked counts trials where a classifier blocked the request. On the
+	// benign_direct arm this is the false-positive count.
+	Blocked int `json:"blocked"`
+	// UtilityOK counts utility trials that executed the expected tool call.
+	UtilityOK int     `json:"utility_ok"`
 	Rate      float64 `json:"rate"`
 	Lower     float64 `json:"lower"`
 	Upper     float64 `json:"upper"`

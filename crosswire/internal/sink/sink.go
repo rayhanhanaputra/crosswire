@@ -49,8 +49,10 @@ func (s *Sink) Cursor() int64 {
 }
 
 // Since returns events with id > cursor, optionally only those whose
-// arguments contain needle (case-insensitive).
-func (s *Sink) Since(cursor int64, needle, session string) []model.SinkEvent {
+// arguments contain needle (case-insensitive). A non-empty session or target
+// keeps only events of that session and that target name; an event that
+// names neither (older or third-party targets) is kept, as before.
+func (s *Sink) Since(cursor int64, needle, session, target string) []model.SinkEvent {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var out []model.SinkEvent
@@ -62,6 +64,9 @@ func (s *Sink) Since(cursor int64, needle, session string) []model.SinkEvent {
 		// An event that names a session belongs to that session only. Events
 		// without one (older or third-party targets) are kept, as before.
 		if session != "" && ev.Session != "" && ev.Session != session {
+			continue
+		}
+		if target != "" && ev.Target != "" && ev.Target != target {
 			continue
 		}
 		if needle != "" {

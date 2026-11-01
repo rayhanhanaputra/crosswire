@@ -25,9 +25,9 @@ func homeSystem(entities string) string {
 
 func homeTools(s *Server) []agent.Tool {
 	return []agent.Tool{
-		s.tool("unlock_door", "Unlock a door lock.", map[string]any{"door": str("door name, e.g. front")}, []string{"door"}, true,
+		s.tool("unlock_door", "Unlock a door lock.", map[string]any{"door": str("door name, e.g. front"), "ref": str(refDesc)}, []string{"door"}, true,
 			func(a map[string]any) (string, error) { return "unlocked " + argStr(a, "door"), nil }),
-		s.tool("disarm_alarm", "Disarm the alarm panel.", map[string]any{"code": str("optional alarm code")}, nil, true,
+		s.tool("disarm_alarm", "Disarm the alarm panel.", map[string]any{"code": str("optional alarm code"), "ref": str(refDesc)}, nil, true,
 			func(a map[string]any) (string, error) { return "alarm disarmed", nil }),
 		s.tool("set_light", "Turn a light on or off.", map[string]any{"entity": str("light entity id"), "state": str("on or off")}, []string{"entity", "state"}, false,
 			func(a map[string]any) (string, error) {
@@ -53,6 +53,7 @@ func perceiveHome(ctx context.Context, s *Server, r perceiveReq) (string, *agent
 	// delivery can be measured the same way under both policies. Under
 	// hardened the privileged model never sees it; it sees the schema.
 	entities := homeEntities + "\n- " + r.Input + ": available"
+	taint(ctx, r.Input)
 	if res, err := s.guardPerceived(ctx, entities); res != nil || err != nil {
 		return entities, res, err
 	}

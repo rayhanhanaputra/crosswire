@@ -21,7 +21,7 @@ func TestHandlerKeepsBlockedReasonAndLayers(t *testing.T) {
 	if c := post(`{"name":"set_reminder","arguments":{}}`); c != 200 {
 		t.Fatalf("status %d", c)
 	}
-	evs := s.Since(0, "", "")
+	evs := s.Since(0, "", "", "")
 	if len(evs) != 2 {
 		t.Fatalf("events %+v", evs)
 	}
@@ -38,7 +38,7 @@ func TestHandlerKeepsSession(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/api/sink", strings.NewReader(`{"name":"issue_refund","arguments":{},"session":"cw-a"}`))
 	s.Handler().ServeHTTP(rec, req)
-	if got := s.Since(0, "", "cw-a"); len(got) != 1 || got[0].Session != "cw-a" {
+	if got := s.Since(0, "", "cw-a", ""); len(got) != 1 || got[0].Session != "cw-a" {
 		t.Fatalf("session not kept: %+v (status %d)", got, rec.Code)
 	}
 }
@@ -48,11 +48,26 @@ func TestSinceKeepsOnlyTheTrialSession(t *testing.T) {
 	s.Add(model.SinkEvent{Name: "issue_refund", Session: "cw-a"})
 	s.Add(model.SinkEvent{Name: "issue_refund", Session: "cw-b"})
 	s.Add(model.SinkEvent{Name: "issue_refund"}) // no session: kept for any trial
-	got := s.Since(0, "", "cw-a")
+	got := s.Since(0, "", "cw-a", "")
 	if len(got) != 2 || got[0].Session != "cw-a" || got[1].Session != "" {
 		t.Fatalf("want the cw-a event and the unlabelled one, got %+v", got)
 	}
-	if all := s.Since(0, "", ""); len(all) != 3 {
+	if all := s.Since(0, "", "", ""); len(all) != 3 {
 		t.Fatalf("no session filter should keep all three, got %d", len(all))
+	}
+}
+
+func TestSinceKeepsOnlyTheNamedTarget(t *testing.T) {
+	s := New()
+	s.Add(model.SinkEvent{Name: "send_email", Target: "voice-agent", Session: "cw-a"})
+	s.Add(model.SinkEvent{Name: "approve_payment", Target: "expense-agent", Session: "cw-a"})
+	s.Add(model.SinkEvent{Name: "disarm_alarm", Target: "camera-agent"}) // no session, other target
+	s.Add(model.SinkEvent{Name: "send_email", Target: "voice-agent", Session: "cw-b"})
+	got := s.Since(0, "", "cw-a", "voice-agent")
+	if len(got) != 1 || got[0].Name != "send_email" || got[0].Session != "cw-a" {
+		t.Fatalf("want only the voice-agent cw-a event, got %+v", got)
+	}
+	if all := s.Since(0, "", "", ""); len(all) != 4 {
+		t.Fatalf("no filter should keep all four, got %d", len(all))
 	}
 }

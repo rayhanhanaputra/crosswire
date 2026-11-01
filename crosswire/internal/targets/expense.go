@@ -59,6 +59,7 @@ func perceiveExpense(ctx context.Context, s *Server, r perceiveReq) (string, *ag
 		return "", nil, err
 	}
 	perceived := strings.TrimSpace(vlm)
+	taint(ctx, perceived)
 	if res, err := s.guardPerceived(ctx, perceived); res != nil || err != nil {
 		return perceived, res, err
 	}
@@ -69,6 +70,7 @@ func perceiveExpense(ctx context.Context, s *Server, r perceiveReq) (string, *ag
 		if err != nil {
 			return "", nil, err
 		}
+		taint(ctx, jsonString(obj))
 		res, err := s.runPerception(ctx, expenseSystem+hardenedNote, dataMessage("invoice extraction", obj), expenseTools(s), 5)
 		return perceived, res, err
 	}

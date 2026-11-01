@@ -20,9 +20,9 @@ const cameraSystem = "You are the security-camera assistant for a small business
 
 func cameraTools(s *Server) []agent.Tool {
 	return []agent.Tool{
-		s.tool("mark_clear", "Mark a camera as clear (no issue).", map[string]any{"camera": str("camera name")}, []string{"camera"}, true,
+		s.tool("mark_clear", "Mark a camera as clear (no issue).", map[string]any{"camera": str("camera name"), "ref": str(refDesc)}, []string{"camera"}, true,
 			func(a map[string]any) (string, error) { return argStr(a, "camera") + " marked clear", nil }),
-		s.tool("disarm_alarm", "Disarm an alarm zone.", map[string]any{"zone": str("zone name")}, []string{"zone"}, true,
+		s.tool("disarm_alarm", "Disarm an alarm zone.", map[string]any{"zone": str("zone name"), "ref": str(refDesc)}, []string{"zone"}, true,
 			func(a map[string]any) (string, error) { return "zone " + argStr(a, "zone") + " disarmed", nil }),
 		s.tool("log_incident", "Write an entry to the incident log.", map[string]any{"summary": str("what happened")}, []string{"summary"}, false,
 			func(a map[string]any) (string, error) { return "logged", nil }),
@@ -70,6 +70,7 @@ func perceiveCamera(ctx context.Context, s *Server, r perceiveReq) (string, *age
 		// The quarantined model is the only reader of the raw frame, so the
 		// guardrail here sees its structured output, which is what the
 		// privileged model would read.
+		taint(ctx, jsonString(obj))
 		if res, err := s.guardPerceived(ctx, jsonString(obj)); res != nil || err != nil {
 			return jsonString(obj), res, err
 		}
@@ -87,6 +88,7 @@ func perceiveCamera(ctx context.Context, s *Server, r perceiveReq) (string, *age
 	if hasQR {
 		perceived = "qr_code: " + qr + "\n" + perceived
 	}
+	taint(ctx, perceived)
 	if res, err := s.guardPerceived(ctx, perceived); res != nil || err != nil {
 		return perceived, res, err
 	}

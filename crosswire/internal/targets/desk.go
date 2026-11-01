@@ -105,6 +105,7 @@ func perceiveDesk(ctx context.Context, s *Server, r perceiveReq) (string, *agent
 // makes the agent read its notes.
 func chatDesk(ctx context.Context, s *Server, msg string) (*agent.Result, error) {
 	notes := deskNotes(sessionOf(ctx))
+	taint(ctx, renderNotes(notes))
 	if len(notes) > 0 {
 		// The notes are the perceived content here; they reach the model on
 		// the trigger, so the perception guardrail runs on them now.

@@ -62,6 +62,7 @@ func perceiveVoice(ctx context.Context, s *Server, r perceiveReq) (string, *agen
 		perceived = strings.TrimSpace(text)
 		user = "The user said (transcribed from audio): " + perceived
 	}
+	taint(ctx, perceived)
 	if res, err := s.guardPerceived(ctx, perceived); res != nil || err != nil {
 		return perceived, res, err
 	}
@@ -100,15 +101,18 @@ func (s *Server) SIPAnswerer(listen string, speakReply bool) (*connector.Answere
 		return nil, errors.New("--sip-listen is only available on the voice-agent")
 	}
 	a, err := connector.NewAnswerer(listen, func(ctx context.Context, wav []byte) ([]byte, error) {
+		// The INVITE's X-Crosswire-Session header is the trial nonce. It
+		// becomes the session of every sink event this call causes.
+		ctx = s.withSession(ctx, connector.SessionFrom(ctx))
 		ctx = context.WithValue(ctx, guardKey{}, &guardTrace{})
-		_, res, err := perceiveVoice(ctx, s, perceiveReq{Source: "microphone/sip", AudioBase64: base64.StdEncoding.EncodeToString(wav)})
+		reply, err := s.sipPerceive(ctx, wav, speakReply)
 		if err != nil {
+			// The caller sees the error on the BYE, and the sink records it
+			// against the session, so a failed call is never read as a refusal.
+			s.report(context.WithoutCancel(ctx), "target_error", map[string]any{"error": err.Error()}, fmt.Errorf("target error: %w", err))
 			return nil, err
 		}
-		if speakReply && res != nil && strings.TrimSpace(res.Text) != "" {
-			return tts.Speak(ctx, res.Text, "")
-		}
-		return nil, nil
+		return reply, nil
 	})
 	if err != nil {
 		return nil, err
@@ -116,4 +120,15 @@ func (s *Server) SIPAnswerer(listen string, speakReply bool) (*connector.Answere
 	a.Logf = func(f string, v ...any) { log.Printf(s.Name+": "+f, v...) }
 	s.SIPAddr = a.Addr().String()
 	return a, nil
+}
+
+func (s *Server) sipPerceive(ctx context.Context, wav []byte, speakReply bool) ([]byte, error) {
+	_, res, err := perceiveVoice(ctx, s, perceiveReq{Source: "microphone/sip", AudioBase64: base64.StdEncoding.EncodeToString(wav), Session: sessionOf(ctx)})
+	if err != nil {
+		return nil, err
+	}
+	if speakReply && res != nil && strings.TrimSpace(res.Text) != "" {
+		return tts.Speak(ctx, res.Text, "")
+	}
+	return nil, nil
 }

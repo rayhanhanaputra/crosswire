@@ -47,10 +47,25 @@ type inCall struct {
 	rtp       *net.UDPConn
 	callerRTP *net.UDPAddr
 	ok200     []byte
+	session   string        // X-Crosswire-Session of the INVITE
 	byeSeen   chan struct{} // caller sent BYE
 	byeAcked  chan struct{} // caller answered our BYE
 	byeOnce   sync.Once
 	ackOnce   sync.Once
+}
+
+type sessionKey struct{}
+
+// WithSession returns ctx carrying a trial session.
+func WithSession(ctx context.Context, session string) context.Context {
+	return context.WithValue(ctx, sessionKey{}, session)
+}
+
+// SessionFrom returns the trial session the answerer read from the INVITE's
+// X-Crosswire-Session header, or "". The Handler's context carries it.
+func SessionFrom(ctx context.Context) string {
+	v, _ := ctx.Value(sessionKey{}).(string)
+	return v
 }
 
 // NewAnswerer binds the SIP socket. listen is host:port; port 0 picks one.
@@ -195,7 +210,7 @@ func (a *Answerer) onInvite(ctx context.Context, wg *sync.WaitGroup, m *sipMsg, 
 		a.reply(from, m, 500, "Server Error", nil, "", randHex(4))
 		return
 	}
-	c := &inCall{callID: id, from: m.get("From"), to: m.get("To"), toTag: randHex(4), via: m.get("Via"),
+	c := &inCall{session: strings.TrimSpace(m.get(SessionHeader)), callID: id, from: m.get("From"), to: m.get("To"), toTag: randHex(4), via: m.get("Via"),
 		contact: contactURI(m.get("Contact")), peer: from, rtp: rtp, callerRTP: callerRTP,
 		byeSeen: make(chan struct{}), byeAcked: make(chan struct{})}
 	if c.contact == "" {
@@ -265,11 +280,13 @@ record:
 		}
 	}
 	var reply []byte
+	var handlerErr string
 	if len(got) >= 800 && a.Handler != nil { // at least 0.1 s of audio
 		a.logf("sip: call %s: %.1f s of caller audio, running the agent", c.callID, float64(len(got))/8000)
-		wav, err := a.Handler(cctx, signal.FromMuLaw8k(got))
+		wav, err := a.Handler(WithSession(cctx, c.session), signal.FromMuLaw8k(got))
 		if err != nil {
 			a.logf("sip: call %s: handler: %v", c.callID, err)
+			handlerErr = err.Error()
 		}
 		reply = wav
 	} else {
@@ -288,12 +305,16 @@ record:
 		return
 	default:
 	}
-	a.sendBye(c, ip)
+	a.sendBye(c, ip, handlerErr)
 }
 
-func (a *Answerer) sendBye(c *inCall, ip string) {
-	msg := fmt.Sprintf("BYE %s SIP/2.0\r\nVia: SIP/2.0/UDP %s:%d;branch=z9hG4bK%s;rport\r\nMax-Forwards: 70\r\nFrom: %s;tag=%s\r\nTo: %s\r\nCall-ID: %s\r\nCSeq: 1 BYE\r\nContent-Length: 0\r\n\r\n",
-		c.contact, ip, a.Addr().Port, randHex(8), c.to, c.toTag, c.from, c.callID)
+func (a *Answerer) sendBye(c *inCall, ip, handlerErr string) {
+	extra := ""
+	if handlerErr != "" {
+		extra = ErrorHeader + ": " + clipHeader(headerSafe(handlerErr), 300) + "\r\n"
+	}
+	msg := fmt.Sprintf("BYE %s SIP/2.0\r\nVia: SIP/2.0/UDP %s:%d;branch=z9hG4bK%s;rport\r\nMax-Forwards: 70\r\nFrom: %s;tag=%s\r\nTo: %s\r\nCall-ID: %s\r\nCSeq: 1 BYE\r\n%sContent-Length: 0\r\n\r\n",
+		c.contact, ip, a.Addr().Port, randHex(8), c.to, c.toTag, c.from, c.callID, extra)
 	for i := 0; i < 3; i++ {
 		_, _ = a.conn.WriteToUDP([]byte(msg), c.peer)
 		select {
@@ -305,4 +326,11 @@ func (a *Answerer) sendBye(c *inCall, ip string) {
 		}
 	}
 	a.logf("sip: call %s: BYE was not acknowledged", c.callID)
+}
+
+func clipHeader(s string, n int) string {
+	if r := []rune(s); len(r) > n {
+		return string(r[:n])
+	}
+	return s
 }

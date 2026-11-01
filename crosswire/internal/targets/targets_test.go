@@ -26,9 +26,13 @@ type fakeLLM struct {
 	asr      string
 	asrCalls int
 	plainN   int
+	guardN   int
 	bodies   []string // request bodies of calls that carried tools
 	temp     float64  // client temperature
 	temps    []float64
+	// temperatures by kind of call: the classifier, the tool-less quarantine
+	// and VLM calls, and the tool-calling agent
+	guardTemps, plainTemps, toolTemps []float64
 }
 
 func (f *fakeLLM) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -57,8 +61,11 @@ func (f *fakeLLM) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	switch {
 	case strings.Contains(system, "prompt-injection detector"):
+		f.guardTemps = append(f.guardTemps, body.Temperature)
+		f.guardN++
 		reply(map[string]any{"role": "assistant", "content": f.guard})
 	case len(body.Tools) > 0:
+		f.toolTemps = append(f.toolTemps, body.Temperature)
 		f.bodies = append(f.bodies, raw.String())
 		if body.Messages[len(body.Messages)-1].Role == "tool" {
 			reply(map[string]any{"role": "assistant", "content": "done"})
@@ -70,6 +77,7 @@ func (f *fakeLLM) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}}})
 	default:
 		f.plainN++
+		f.plainTemps = append(f.plainTemps, body.Temperature)
 		reply(map[string]any{"role": "assistant", "content": f.plain})
 	}
 }

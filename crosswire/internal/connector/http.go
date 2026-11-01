@@ -199,7 +199,7 @@ func sendSIP(ctx context.Context, t model.Target, in Input) (model.Exchange, err
 	}
 	ex.Request = map[string]any{"transport": "sip", "invite": t.Endpoint, "codec": "PCMU/8000", "audio_bytes": len(wav)}
 	start := time.Now()
-	call, err := Dial(ctx, t.SIP, t.Endpoint, wav)
+	call, err := DialSession(ctx, t.SIP, t.Endpoint, wav, in.Canary)
 	ex.DurationMs = int(time.Since(start).Milliseconds())
 	ex.Status = call.Status
 	raw, _ := json.Marshal(call)
@@ -208,6 +208,12 @@ func sendSIP(ctx context.Context, t model.Target, in Input) (model.Exchange, err
 	if err != nil {
 		ex.Error = err.Error()
 		return ex, err
+	}
+	if call.Error != "" {
+		// The target's handler failed after answering. Treat the call as a
+		// trial that measured nothing, the way an HTTP error body is.
+		ex.Error = "target error: " + call.Error
+		return ex, errors.New(ex.Error)
 	}
 	ex.ResponseText = fmt.Sprintf("call answered (%d %s): played %.1f s, heard %.1f s", call.Status, call.Reason, call.SentSeconds, call.ReceivedSeconds)
 	if call.RemoteHungUp {

@@ -29,6 +29,10 @@ import (
 
 // Call is what one SIP exchange produced.
 type Call struct {
+	// Error is what the far end reported in the X-Crosswire-Error header of
+	// its BYE, for example a handler failure on a reference target. It is
+	// the first field so a marshalled failed call starts with {"error".
+	Error           string   `json:"error,omitempty"`
 	URI             string   `json:"uri"`
 	Status          int      `json:"status"`
 	Reason          string   `json:"reason"`
@@ -52,8 +56,21 @@ const (
 	maxCallSecs = 300
 )
 
+// SessionHeader carries the trial nonce on the INVITE. A reference target
+// copies it into the session of every sink event the call causes.
+const SessionHeader = "X-Crosswire-Session"
+
+// ErrorHeader is set on the answerer's BYE when its handler failed.
+const ErrorHeader = "X-Crosswire-Error"
+
 // Dial places the call, plays wav, listens for the far end, hangs up.
 func Dial(ctx context.Context, cfg model.SIPConfig, uri string, wav []byte) (Call, error) {
+	return DialSession(ctx, cfg, uri, wav, "")
+}
+
+// DialSession is Dial with a trial session sent in the X-Crosswire-Session
+// header of the INVITE.
+func DialSession(ctx context.Context, cfg model.SIPConfig, uri string, wav []byte, session string) (Call, error) {
 	call := Call{URI: uri}
 	ulaw, err := signal.ToMuLaw8k(wav)
 	if err != nil {
@@ -93,7 +110,7 @@ func Dial(ctx context.Context, cfg model.SIPConfig, uri string, wav []byte) (Cal
 	}
 	fromTag, callID := randHex(8), randHex(16)
 	d := &dialog{conn: sipConn, remote: remote, localIP: localIP, sipPort: sipPort, uri: uri, user: user,
-		from: from, fromTag: fromTag, callID: callID, cseq: 1, call: &call}
+		from: from, fromTag: fromTag, callID: callID, cseq: 1, call: &call, session: session}
 	sdp := fmt.Sprintf("v=0\r\no=- %d %d IN IP4 %s\r\ns=crosswire\r\nc=IN IP4 %s\r\nt=0 0\r\nm=audio %d RTP/AVP 0\r\na=rtpmap:0 PCMU/8000\r\na=sendrecv\r\n",
 		time.Now().Unix(), time.Now().Unix(), localIP, localIP, rtpPort)
 
@@ -182,6 +199,7 @@ type dialog struct {
 	lastInviteCSeq     int
 	lastInviteBranch   string
 	lastInviteResponse *sipMsg
+	session            string
 }
 
 func (d *dialog) logf(format string, a ...any) {
@@ -218,6 +236,9 @@ func (d *dialog) request(method, target string, extra []string, body string, bra
 	fmt.Fprintf(&b, "CSeq: %d %s\r\n", d.cseq, method)
 	fmt.Fprintf(&b, "Contact: <sip:%s@%s:%d>\r\n", d.from, d.localIP, d.sipPort)
 	b.WriteString("User-Agent: crosswire\r\n")
+	if method == "INVITE" && d.session != "" {
+		fmt.Fprintf(&b, "%s: %s\r\n", SessionHeader, headerSafe(d.session))
+	}
 	for _, h := range extra {
 		b.WriteString(h + "\r\n")
 	}
@@ -339,6 +360,9 @@ func (d *dialog) handleRequest(m *sipMsg, addr *net.UDPAddr) bool {
 	case "BYE":
 		reply(200, "OK")
 		d.logf("far end sent BYE")
+		if msg := m.get(ErrorHeader); msg != "" {
+			d.call.Error = msg
+		}
 		return true
 	case "OPTIONS", "INFO", "NOTIFY", "UPDATE":
 		reply(200, "OK")
@@ -436,6 +460,17 @@ func parseSIP(raw string) (*sipMsg, error) {
 		m.headers[k] = append(m.headers[k], strings.TrimSpace(v))
 	}
 	return m, nil
+}
+
+// headerSafe keeps a value on one header line.
+func headerSafe(v string) string {
+	v = strings.Map(func(r rune) rune {
+		if r == '\r' || r == '\n' {
+			return ' '
+		}
+		return r
+	}, v)
+	return strings.TrimSpace(v)
 }
 
 func parseSIPURI(uri string) (host, port, user string, err error) {

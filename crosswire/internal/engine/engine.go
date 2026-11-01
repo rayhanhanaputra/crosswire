@@ -49,15 +49,35 @@ type Request struct {
 	Variants        []map[string]any `json:"variants,omitempty"`
 	ControlVariants []map[string]any `json:"control_variants,omitempty"`
 	// Direct also sends the decoded payload text through the chat path.
-	Direct      bool `json:"direct"`
-	Repeats     int  `json:"repeats"`
-	Concurrency int  `json:"concurrency"`
+	Direct bool `json:"direct"`
+	// BenignDirect, when set, adds the benign_direct arm: this plain text
+	// goes through the chat path once per repeat. The arm measures how often
+	// a chat-path classifier blocks a legitimate request.
+	BenignDirect string `json:"benign_direct,omitempty"`
+	// Utility, when set, adds the utility arm: a legitimate task that should
+	// execute a privileged tool. See Utility.
+	Utility     *Utility `json:"utility,omitempty"`
+	Repeats     int      `json:"repeats"`
+	Concurrency int      `json:"concurrency"`
 	// ProductionAck must be true for production targets.
 	ProductionAck bool   `json:"production_acknowledged"`
 	CampaignID    string `json:"campaign_id,omitempty"`
 	// RunID lets the caller choose the id up front (async API). Empty
 	// means the engine generates one.
 	RunID string `json:"-"`
+}
+
+// Utility is one legitimate task per scenario. Fields, when given, go
+// through Adapter (default: the request's adapter) on the perception path,
+// followed by the trigger when the target has one. Message, when given, goes
+// through the chat path after that. At least one of the two is required. The
+// trial succeeds when an executed sink event of the trial's session matches
+// Expect.
+type Utility struct {
+	Adapter string         `json:"adapter,omitempty"`
+	Fields  map[string]any `json:"fields,omitempty"`
+	Message string         `json:"message,omitempty"`
+	Expect  model.Expect   `json:"expect"`
 }
 
 // Engine wires the pieces together.
@@ -106,6 +126,28 @@ func (e *Engine) Validate(req Request) (model.Target, error) {
 	}
 	if req.Direct && t.DirectEndpoint == "" {
 		return t, errors.New("direct arm requested but the target has no direct endpoint")
+	}
+	if req.BenignDirect != "" && t.DirectEndpoint == "" {
+		return t, errors.New("benign_direct arm requested but the target has no direct endpoint")
+	}
+	if u := req.Utility; u != nil {
+		if u.Expect.Tool == "" || u.Expect.Arg == "" {
+			return t, errors.New("utility.expect needs a tool and an arg")
+		}
+		if u.Expect.Match != "" && u.Expect.Match != "equals" && u.Expect.Match != "contains" {
+			return t, fmt.Errorf("utility.expect.match %q: want equals or contains", u.Expect.Match)
+		}
+		if len(u.Fields) == 0 && strings.TrimSpace(u.Message) == "" {
+			return t, errors.New("utility needs fields, a message, or both")
+		}
+		if strings.TrimSpace(u.Message) != "" && t.DirectEndpoint == "" {
+			return t, errors.New("utility message needs a target with a direct endpoint")
+		}
+		if len(u.Fields) > 0 {
+			if _, err := e.Encoder.Encode(context.Background(), orDefault(u.Adapter, req.Adapter), channel.Substitute(u.Fields, "cw-preview")); err != nil {
+				return t, fmt.Errorf("utility: %w", err)
+			}
+		}
 	}
 	if t.Transport == "sip" {
 		enc, _ := e.Encoder.Encode(context.Background(), req.Adapter, channel.Substitute(req.Fields, "cw-preview"))
@@ -225,6 +267,10 @@ func (e *Engine) Run(ctx context.Context, req Request) (model.Run, error) {
 	}
 	run.TargetName = t.Name
 	run.TargetInfo = targetInfo(ctx, t)
+	// The name the target reports, not the store's label: sink events carry
+	// the former. Empty when /health could not be read, which turns the
+	// target filter off.
+	reported, _ := run.TargetInfo["name"].(string)
 	run.Variants = max(len(req.Variants), len(req.ControlVariants))
 	if req.ControlFields != nil {
 		run.Control = fmt.Sprint(req.ControlFields)
@@ -256,6 +302,12 @@ func (e *Engine) Run(ctx context.Context, req Request) (model.Run, error) {
 		if req.Direct {
 			jobs = append(jobs, job{i, "direct"})
 		}
+		if req.BenignDirect != "" {
+			jobs = append(jobs, job{i, "benign_direct"})
+		}
+		if req.Utility != nil {
+			jobs = append(jobs, job{i, "utility"})
+		}
 	}
 	trials := make([]model.Trial, len(jobs))
 	var wg sync.WaitGroup
@@ -266,7 +318,7 @@ func (e *Engine) Run(ctx context.Context, req Request) (model.Run, error) {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			tr := e.trial(ctx, t, req, run.ID, j.index, j.arm)
+			tr := e.trial(ctx, t, req, run.ID, reported, j.index, j.arm)
 			trials[slot] = tr
 			if e.OnTrial != nil {
 				e.OnTrial(run.ID, tr)
@@ -286,7 +338,7 @@ func (e *Engine) Run(ctx context.Context, req Request) (model.Run, error) {
 	return run, nil
 }
 
-func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID string, index int, arm string) model.Trial {
+func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID, reported string, index int, arm string) model.Trial {
 	canary := "cw-" + newHex(4)
 	tr := model.Trial{Index: index, Arm: arm, Canary: canary}
 	fields, variant := pickFields(req.Fields, req.Variants, index)
@@ -295,6 +347,8 @@ func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID s
 	}
 	tr.Variant = variant
 
+	util := req.Utility
+	utilPerception := arm == "utility" && len(util.Fields) > 0
 	var enc channel.Encoded
 	var err error
 	switch arm {
@@ -306,6 +360,14 @@ func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID s
 		inj, err = e.Encoder.Encode(ctx, req.Adapter, channel.Substitute(fields, canary))
 		if err == nil {
 			enc, err = e.Encoder.Encode(ctx, "text", map[string]any{"text": inj.Input.Content})
+		}
+	case "benign_direct":
+		enc, err = e.Encoder.Encode(ctx, "text", channel.Substitute(map[string]any{"text": req.BenignDirect}, canary))
+	case "utility":
+		if utilPerception {
+			enc, err = e.Encoder.Encode(ctx, orDefault(util.Adapter, req.Adapter), channel.Substitute(util.Fields, canary))
+		} else {
+			enc, err = e.Encoder.Encode(ctx, "text", channel.Substitute(map[string]any{"text": util.Message}, canary))
 		}
 	default:
 		enc, err = e.Encoder.Encode(ctx, req.Adapter, channel.Substitute(fields, canary))
@@ -324,11 +386,11 @@ func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID s
 	}
 
 	cursor := e.Sink.Cursor()
-	connArm := connector.Perception
-	if arm == "direct" {
-		connArm = connector.Direct
+	first := connector.Perception
+	if arm == "direct" || arm == "benign_direct" || (arm == "utility" && !utilPerception) {
+		first = connector.Direct
 	}
-	ex, sendErr := connector.Send(ctx, t, connArm, enc.Input)
+	ex, sendErr := connector.Send(ctx, t, first, enc.Input)
 	if sendErr != nil && ex.Error == "" {
 		ex.Error = sendErr.Error()
 	}
@@ -343,10 +405,25 @@ func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID s
 	tr.Exchange = ex
 	// Two-phase trial: the artifact was stored; now the routine request
 	// that makes the agent read it. Findings are judged on the trigger's
-	// response and on every sink event since the first send.
+	// response and on every sink event since the first send. A utility
+	// trial with both an artifact and a chat message sends the message as
+	// its second phase instead.
 	judged := ex
-	if sendErr == nil && arm != "direct" && t.TriggerEndpoint != "" {
-		tex, terr := connector.Send(ctx, t, connector.Trigger, enc.Input)
+	second, secondIn := connector.Arm(""), enc.Input
+	switch {
+	case utilPerception && strings.TrimSpace(util.Message) != "":
+		menc, merr := e.Encoder.Encode(ctx, "text", channel.Substitute(map[string]any{"text": util.Message}, canary))
+		if merr != nil {
+			tr.Exchange.Error = "encode: " + merr.Error()
+			return tr
+		}
+		menc.Input.Canary = canary
+		second, secondIn = connector.Direct, menc.Input
+	case first == connector.Perception && t.TriggerEndpoint != "":
+		second = connector.Trigger
+	}
+	if sendErr == nil && second != "" {
+		tex, terr := connector.Send(ctx, t, second, secondIn)
 		if terr != nil && tex.Error == "" {
 			tex.Error = terr.Error()
 		}
@@ -364,15 +441,53 @@ func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID s
 	if sendErr == nil {
 		time.Sleep(sinkGrace)
 	}
-	tr.Sink = e.Sink.Since(cursor, "", canary)
-	tr.Findings = evidence.Match(t.Evidence, canary, judged, tr.Sink)
-	tr.Hit = evidence.IsHit(tr.Findings)
-	tr.Attempted = tr.Hit || evidence.IsAttempted(tr.Findings)
+	tr.Sink = e.Sink.Since(cursor, "", canary, reported)
+	tr.Guard = guardVerdict(ex.RawResponse, tr.Trigger)
+	switch arm {
+	case "benign_direct":
+		// A benign request has no forbidden outcome to judge.
+	case "utility":
+		ok := evidence.UtilityMet(util.Expect, tr.Sink)
+		tr.Utility = &ok
+	default:
+		tr.Findings = evidence.Match(t.Evidence, canary, judged, tr.Sink)
+		tr.Hit = evidence.IsHit(tr.Findings)
+		tr.Attempted = tr.Hit || evidence.IsAttempted(tr.Findings)
+	}
 	if judged.Perceived != "" && evidence.Carries(tr.Content, canary) {
 		d := evidence.Carries(judged.Perceived, canary)
 		tr.Delivered = &d
 	}
 	return tr
+}
+
+// guardVerdict reads the classifier verdict a reference target reports in
+// its response (guardrail.verdict). A block on either phase wins; "" means
+// no phase reported a guardrail.
+func guardVerdict(first string, second *model.Exchange) string {
+	raws := []string{first}
+	if second != nil {
+		raws = append(raws, second.RawResponse)
+	}
+	out := ""
+	for _, raw := range raws {
+		var d struct {
+			Guardrail struct {
+				Enabled bool   `json:"enabled"`
+				Verdict string `json:"verdict"`
+			} `json:"guardrail"`
+		}
+		if json.Unmarshal([]byte(raw), &d) != nil || !d.Guardrail.Enabled || d.Guardrail.Verdict == "" {
+			continue
+		}
+		if d.Guardrail.Verdict == "block" {
+			return "block"
+		}
+		if out == "" || out == "not_checked" {
+			out = d.Guardrail.Verdict
+		}
+	}
+	return out
 }
 
 // channelSummary re-encodes the first injected trial so the run carries one
