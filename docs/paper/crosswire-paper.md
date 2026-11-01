@@ -1,5 +1,8 @@
 # Where the Guardrail Sits: Measuring Prompt Injection Through What Agents Perceive
 
+> **Superseded, 1 November 2026 (afternoon).** An independent review found that the placement result's chat column equals the no-classifier column by construction, that the perception-path classifier blocked benign inputs at 25/30 (home), 22/30 (voice) and 26/30 (expense), that on the desk scenario the withhold and confirm layers are inert by design (every chat request counts as confirmed and offers every tool), that the hardened expense agent paid none of 30 legitimate invoices, and that phone-call trials carried no session so their blocked-call counts include other targets' events. The numbers below are reproduced as measured; the claims drawn from them are being rewritten around a provenance theory. See `docs/research/review-2026-11-01.md`.
+
+
 **[Author], [affiliation], [email]** · Draft of 1 November 2026 · Target: a security workshop (AISec, SaTML or an S&P/USENIX workshop). Bracketed fields are for the author.
 
 ## Abstract
