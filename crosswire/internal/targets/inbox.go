@@ -32,7 +32,7 @@ func inboxTools(s *Server) []agent.Tool {
 			map[string]any{"to": str("recipient address"), "subject": str("subject"), "note": str("note to add")},
 			[]string{"to"}, true,
 			func(a map[string]any) (string, error) {
-				if s.Policy == agent.Hardened && !strings.HasSuffix(argStr(a, "to"), "@example.com") {
+				if s.interlockOn() && !strings.HasSuffix(argStr(a, "to"), "@example.com") {
 					return "", errors.New("recipient is outside the organisation")
 				}
 				return "forwarded to " + argStr(a, "to"), nil
@@ -41,7 +41,7 @@ func inboxTools(s *Server) []agent.Tool {
 			map[string]any{"file": str("file name"), "with": str("email address")},
 			[]string{"file", "with"}, true,
 			func(a map[string]any) (string, error) {
-				if s.Policy == agent.Hardened && !strings.HasSuffix(argStr(a, "with"), "@example.com") {
+				if s.interlockOn() && !strings.HasSuffix(argStr(a, "with"), "@example.com") {
 					return "", errors.New("recipient is outside the organisation")
 				}
 				return "shared " + argStr(a, "file") + " with " + argStr(a, "with"), nil
@@ -73,7 +73,10 @@ func perceiveInbox(ctx context.Context, s *Server, r perceiveReq) (string, *agen
 		return "", nil, badRequest("cannot read document: " + err.Error())
 	}
 	label := map[string]string{"application/pdf": "attached PDF", "text/calendar": "calendar invite", "message/rfc822": "email"}[kind]
-	if s.Policy == agent.Hardened {
+	if res, err := s.guardPerceived(ctx, perceived); res != nil || err != nil {
+		return perceived, res, err
+	}
+	if s.quarantineOn() {
 		obj, err := s.quarantine(ctx,
 			"Summarise an incoming "+label+". Schema: {\"sender\": string, \"subject\": string, \"request\": one of "+
 				strings.Join(inboxRequests, ", ")+", \"summary\": one sentence}.",
@@ -81,11 +84,11 @@ func perceiveInbox(ctx context.Context, s *Server, r perceiveReq) (string, *agen
 		if err != nil {
 			return "", nil, err
 		}
-		res, err := s.LLM.RunPrompt(ctx, inboxSystem+hardenedNote, dataMessage(label, obj), inboxTools(s), s.Policy, 5)
+		res, err := s.runPerception(ctx, inboxSystem+hardenedNote, dataMessage(label, obj), inboxTools(s), 5)
 		return perceived, res, err
 	}
-	res, err := s.LLM.RunPrompt(ctx, inboxSystem,
-		"New "+label+" arrived:\n\n"+perceived+"\n\nTriage it and handle anything routine.", inboxTools(s), s.Policy, 5)
+	res, err := s.runPerception(ctx, inboxSystem,
+		"New "+label+" arrived:\n\n"+perceived+"\n\nTriage it and handle anything routine.", inboxTools(s), 5)
 	return perceived, res, err
 }
 

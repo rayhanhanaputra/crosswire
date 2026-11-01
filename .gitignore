@@ -13,3 +13,6 @@ out/
 
 # OS / editor
 .DS_Store
+
+# Crosswire run artifacts
+crosswire/docs/results/target-logs/

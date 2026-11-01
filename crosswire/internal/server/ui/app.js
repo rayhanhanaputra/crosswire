@@ -285,15 +285,16 @@ function armRow(name, a) {
     row.append(h('span', { class: 'kn' }, `0/${a ? a.trials : 0}`), h('span', { class: 'ci' }, 'no trial reached the target'));
     return row;
   }
-  row.append(h('span', { class: 'kn' }, `${a.hits}/${a.reached}`),
-    h('span', { class: 'ci' }, `[${a.lower.toFixed(2)}–${a.upper.toFixed(2)}]`));
+  const attempted = a.attempted == null ? '' : ` · attempted ${a.attempted}`;
+  row.append(h('span', { class: 'kn', title: 'executed / trials that reached the target' }, `${a.hits}/${a.reached}`),
+    h('span', { class: 'ci' }, `[${a.lower.toFixed(2)}–${a.upper.toFixed(2)}]${attempted}`));
   const bar = h('div', { class: 'bar', role: 'img', 'aria-label': `${a.hits} of ${a.reached}, 95% interval ${pct(a.lower)} to ${pct(a.upper)}` },
     h('div', { class: 'span' }), h('div', { class: 'tick' }));
   bar.style.setProperty('--lo', a.lower);
   bar.style.setProperty('--hi', a.upper);
   bar.style.setProperty('--rate', a.rate);
   row.append(bar);
-  if (name === 'injected') row.append(h('span', { class: 'extra' }, `hits / trials that reached the target; delivered ${a.delivered}/${a.reached}; Wilson 95% interval`));
+  if (name === 'injected') row.append(h('span', { class: 'extra' }, `hits = forbidden call executed; attempted = executed or refused; delivered ${a.delivered}/${a.reached}; Wilson 95% interval on hits`));
   return row;
 }
 
@@ -316,7 +317,7 @@ function trialRow(t) {
   const delivered = t.delivered == null ? '–' : t.delivered ? '✓' : '✗';
   const findings = h('td', {});
   for (const f of t.findings || []) {
-    findings.append(h('div', { class: f.hint ? 'hint-find' : '' }, f.hint ? h('span', { class: 'tag' }, 'hint') : null, ' ', `${f.rule}: ${f.detail}`));
+    findings.append(h('div', { class: f.hint ? 'hint-find' : '' }, f.hint ? h('span', { class: 'tag' }, f.blocked ? 'refused' : 'hint') : null, ' ', `${f.rule}: ${f.detail}${f.reason ? ` (${f.reason})` : ''}`));
   }
   let response = ex.error ? `error: ${ex.error}` : ex.response_text || (ex.status ? `HTTP ${ex.status}` : '');
   if (t.trigger) response += `\n\ntrigger: ${t.trigger.error ? 'error: ' + t.trigger.error : t.trigger.response_text || ''}`;
@@ -326,18 +327,22 @@ function trialRow(t) {
     responseTd.append(h('audio', { controls: true, src: `/api/runs/${encodeURIComponent(rid)}/artifacts/${arm}/${idx}/reply`, title: 'far end audio' }));
   }
   const sinkTd = h('td', { class: 'mono' });
-  for (const ev of t.sink || []) sinkTd.append(h('div', {}, `${ev.name} ${JSON.stringify(ev.arguments)}`));
+  for (const ev of t.sink || []) {
+    sinkTd.append(h('div', {}, ev.blocked ? h('span', { class: 'tag' }, 'refused') : null, ev.blocked ? ' ' : null,
+      `${ev.name} ${JSON.stringify(ev.arguments)}`, ev.blocked && ev.reason ? ` (${ev.reason})` : ''));
+  }
+  const outcome = t.hit ? ['hit-yes', 'hit'] : t.attempted ? ['', 'attempted'] : ['muted', 'no'];
   return h('tr', { class: 't-' + t.arm },
     h('td', {}, t.arm), h('td', {}, t.index), h('td', { class: 'mono nowrap' }, t.canary),
     h('td', { class: 'nowrap', title: 'perceived text contains the canary' }, delivered),
-    h('td', { class: t.hit ? 'hit-yes' : 'muted' }, t.hit ? 'hit' : 'no'),
+    h('td', { class: outcome[0], title: 'hit = forbidden call executed; attempted = refused by the target' }, outcome[1]),
     findings, responseTd, clampCell(ex.perceived), sinkTd);
 }
 
 function trialsTable(trials) {
   const body = h('tbody', {}, trials.map(trialRow));
   return h('div', { class: 'tablewrap' }, h('table', {},
-    h('thead', {}, h('tr', {}, ['arm', '#', 'canary', 'delivered', 'hit', 'findings', 'response', 'perceived', 'sink events'].map((c) => h('th', {}, c)))),
+    h('thead', {}, h('tr', {}, ['arm', '#', 'canary', 'delivered', 'outcome', 'findings', 'response', 'perceived', 'sink events'].map((c) => h('th', {}, c)))),
     body));
 }
 
@@ -353,6 +358,12 @@ function renderRun(el, run) {
       run.id ? h('a', { href: `/api/runs/${encodeURIComponent(run.id)}/bundle`, download: '' }, 'Download bundle') : null)));
   el.append(h('p', { class: 'muted small mono' },
     `${run.id || ''}  ${fmtTime(run.started_at)}  ${run.duration_ms || 0} ms  source ${ch.source || '?'}  repeats ${run.repeats}`));
+  const info = run.target_info;
+  if (info) {
+    const on = Object.entries(info.layers || {}).filter(([, v]) => v).map(([k]) => k).join(', ') || 'none';
+    el.append(h('p', { class: 'muted small mono' },
+      `policy ${info.policy || '?'}  model ${info.model || '?'}  temperature ${info.temperature ?? '?'}  layers ${on}  guardrail ${info.guardrail_placement || 'off'}`));
+  }
   if (run.error) el.append(h('p', { class: 'err' }, run.error));
   el.append(h('div', { class: 'verdict' }, badge(run.verdict.outcome), h('p', { class: 'why' }, run.verdict.explanation || '')));
   if (ch.modeled) el.append(h('p', { class: 'muted small' }, 'Modeled channel: this run cannot support a reproduced claim.'));
@@ -854,7 +865,7 @@ function initIntruder() {
     };
   }
 
-  const knCell = (a) => (a && a.reached ? h('td', { class: 'mono nowrap' }, `${a.hits}/${a.reached} [${a.lower.toFixed(2)}–${a.upper.toFixed(2)}]`) : h('td', { class: 'muted' }, '–'));
+  const knCell = (a) => (a && a.reached ? h('td', { class: 'mono nowrap' }, `${a.hits}/${a.reached} [${a.lower.toFixed(2)}–${a.upper.toFixed(2)}]${a.attempted == null ? '' : ` att ${a.attempted}`}`) : h('td', { class: 'muted' }, '–'));
   function campaignRow(i, row) {
     const arms = (row.verdict && row.verdict.arms) || {};
     const tr = h('tr', { class: row.run_id ? 'click' : '', tabindex: row.run_id ? 0 : null },
@@ -915,7 +926,7 @@ function initHistory() {
       for (const r of runs) {
         const inj = r.verdict.arms && r.verdict.arms.injected;
         const ctl = r.verdict.arms && r.verdict.arms.control;
-        const kn = (a) => (a && a.reached ? `${a.hits}/${a.reached} [${a.lower.toFixed(2)}–${a.upper.toFixed(2)}]` : '–');
+        const kn = (a) => (a && a.reached ? `${a.hits}/${a.reached} [${a.lower.toFixed(2)}–${a.upper.toFixed(2)}]${a.attempted == null ? '' : ` att ${a.attempted}`}` : '–');
         const tr = h('tr', { class: 'click' + (r.id === selected ? ' sel' : ''), tabindex: 0, 'data-id': r.id },
           h('td', { class: 'nowrap' }, fmtTime(r.started_at)), h('td', {}, badge(r.verdict.outcome)),
           h('td', {}, r.target_name || r.target_id), h('td', {}, r.channel.adapter, r.channel.modeled ? [' ', h('span', { class: 'tag modeled' }, 'MODELED')] : null),

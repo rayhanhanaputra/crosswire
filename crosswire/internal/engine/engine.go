@@ -8,8 +8,13 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -38,6 +43,11 @@ type Request struct {
 	// ControlFields are the benign control, same adapter. Nil skips the
 	// control arm (the verdict can then be at most "observed").
 	ControlFields map[string]any `json:"control_fields"`
+	// Variants are paraphrases of the payload. Trial i of the injected (and
+	// direct) arm uses Variants[i mod len]; keys absent from a variant fall
+	// back to Fields. ControlVariants does the same for the control arm.
+	Variants        []map[string]any `json:"variants,omitempty"`
+	ControlVariants []map[string]any `json:"control_variants,omitempty"`
 	// Direct also sends the decoded payload text through the chat path.
 	Direct      bool `json:"direct"`
 	Repeats     int  `json:"repeats"`
@@ -91,6 +101,9 @@ func (e *Engine) Validate(req Request) (model.Target, error) {
 			return t, fmt.Errorf("control: %w", err)
 		}
 	}
+	if err := e.validateVariants(t, req); err != nil {
+		return t, err
+	}
 	if req.Direct && t.DirectEndpoint == "" {
 		return t, errors.New("direct arm requested but the target has no direct endpoint")
 	}
@@ -105,6 +118,93 @@ func (e *Engine) Validate(req Request) (model.Target, error) {
 		return t, fmt.Errorf("response marker %q occurs in the payload; it cannot be evidence", bad[0])
 	}
 	return t, nil
+}
+
+// validateVariants checks that every variant encodes, does not carry a
+// response marker, and, where the target requires the canary, renders the
+// canary into the decoded content.
+func (e *Engine) validateVariants(t model.Target, req Request) error {
+	needCanary := t.Evidence.RequireCanary == nil || *t.Evidence.RequireCanary
+	check := func(label string, base map[string]any, variants []map[string]any) error {
+		for i := range variants {
+			fields := mergeFields(base, variants[i])
+			enc, err := e.Encoder.Encode(context.Background(), req.Adapter, channel.Substitute(fields, "cw-preview"))
+			if err != nil {
+				return fmt.Errorf("%s variant %d: %w", label, i, err)
+			}
+			if needCanary && !evidence.Carries(enc.Input.Content, "cw-preview") {
+				return fmt.Errorf("%s variant %d does not render the canary, but the target requires it", label, i)
+			}
+			if bad := evidence.SelfMatching(t.Evidence, fmt.Sprint(fields)); len(bad) > 0 {
+				return fmt.Errorf("%s variant %d: response marker %q occurs in the payload", label, i, bad[0])
+			}
+		}
+		return nil
+	}
+	if err := check("payload", req.Fields, req.Variants); err != nil {
+		return err
+	}
+	if req.ControlFields != nil {
+		return check("control", req.ControlFields, req.ControlVariants)
+	}
+	return nil
+}
+
+// mergeFields returns base overlaid with the keys of variant.
+func mergeFields(base, variant map[string]any) map[string]any {
+	out := make(map[string]any, len(base)+len(variant))
+	for k, v := range base {
+		out[k] = v
+	}
+	for k, v := range variant {
+		out[k] = v
+	}
+	return out
+}
+
+// pickFields chooses the fields and variant index for trial i.
+func pickFields(base map[string]any, variants []map[string]any, i int) (map[string]any, int) {
+	if len(variants) == 0 {
+		return base, 0
+	}
+	idx := i % len(variants)
+	return mergeFields(base, variants[idx]), idx
+}
+
+// targetInfo reads the reference target's /health answer so the run records
+// which layers, temperature and model were active. Best effort: any failure
+// returns nil. Production targets are never probed.
+func targetInfo(ctx context.Context, t model.Target) map[string]any {
+	if t.Environment == "production" {
+		return nil
+	}
+	raw := t.Endpoint
+	if t.Transport == "sip" || !strings.HasPrefix(raw, "http") {
+		raw = t.DirectEndpoint
+	}
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return nil
+	}
+	cctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(cctx, http.MethodGet, u.Scheme+"://"+u.Host+"/health", nil)
+	if err != nil {
+		return nil
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil
+	}
+	var info map[string]any
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<16)).Decode(&info); err != nil {
+		return nil
+	}
+	return info
 }
 
 // Run executes the request and stores the result.
@@ -124,6 +224,8 @@ func (e *Engine) Run(ctx context.Context, req Request) (model.Run, error) {
 		return run, err
 	}
 	run.TargetName = t.Name
+	run.TargetInfo = targetInfo(ctx, t)
+	run.Variants = max(len(req.Variants), len(req.ControlVariants))
 	if req.ControlFields != nil {
 		run.Control = fmt.Sprint(req.ControlFields)
 	}
@@ -187,21 +289,26 @@ func (e *Engine) Run(ctx context.Context, req Request) (model.Run, error) {
 func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID string, index int, arm string) model.Trial {
 	canary := "cw-" + newHex(4)
 	tr := model.Trial{Index: index, Arm: arm, Canary: canary}
+	fields, variant := pickFields(req.Fields, req.Variants, index)
+	if arm == "control" {
+		fields, variant = pickFields(req.ControlFields, req.ControlVariants, index)
+	}
+	tr.Variant = variant
 
 	var enc channel.Encoded
 	var err error
 	switch arm {
 	case "control":
-		enc, err = e.Encoder.Encode(ctx, req.Adapter, channel.Substitute(req.ControlFields, canary))
+		enc, err = e.Encoder.Encode(ctx, req.Adapter, channel.Substitute(fields, canary))
 	case "direct":
 		// The direct arm types the decoded payload into chat.
 		var inj channel.Encoded
-		inj, err = e.Encoder.Encode(ctx, req.Adapter, channel.Substitute(req.Fields, canary))
+		inj, err = e.Encoder.Encode(ctx, req.Adapter, channel.Substitute(fields, canary))
 		if err == nil {
 			enc, err = e.Encoder.Encode(ctx, "text", map[string]any{"text": inj.Input.Content})
 		}
 	default:
-		enc, err = e.Encoder.Encode(ctx, req.Adapter, channel.Substitute(req.Fields, canary))
+		enc, err = e.Encoder.Encode(ctx, req.Adapter, channel.Substitute(fields, canary))
 	}
 	if err != nil {
 		tr.Exchange.Error = "encode: " + err.Error()
@@ -260,6 +367,7 @@ func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID s
 	tr.Sink = e.Sink.Since(cursor, "")
 	tr.Findings = evidence.Match(t.Evidence, canary, judged, tr.Sink)
 	tr.Hit = evidence.IsHit(tr.Findings)
+	tr.Attempted = tr.Hit || evidence.IsAttempted(tr.Findings)
 	if judged.Perceived != "" && evidence.Carries(tr.Content, canary) {
 		d := evidence.Carries(judged.Perceived, canary)
 		tr.Delivered = &d

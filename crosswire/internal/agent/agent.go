@@ -23,6 +23,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -50,6 +51,7 @@ type Action struct {
 	Name      string         `json:"name"`
 	Arguments map[string]any `json:"arguments"`
 	Result    string         `json:"result"`
+	Error     string         `json:"error,omitempty"` // refusal text when the call did not execute
 	Blocked   bool           `json:"blocked,omitempty"`
 }
 
@@ -76,17 +78,37 @@ type Client struct {
 	BaseURL string
 	APIKey  string
 	Model   string
-	HTTP    *http.Client
+	// Temperature is sent with every request. Zero is the default and keeps
+	// runs repeatable; raise it to measure variance across trials.
+	Temperature float64
+	HTTP        *http.Client
 }
 
 // ClientFromEnv reads CROSSWIRE_LLM_BASE_URL / CROSSWIRE_LLM_API_KEY /
 // CROSSWIRE_LLM_MODEL, falling back to OPENAI_* names. It never logs the key.
-func ClientFromEnv() (*Client, error) {
-	base := firstEnv("CROSSWIRE_LLM_BASE_URL", "OPENAI_BASE_URL")
+func ClientFromEnv() (*Client, error) { return ClientFromConfig("", "") }
+
+// ClientFromConfig is ClientFromEnv with a provider override. baseURL, when
+// set, replaces the base URL from the environment. keyEnv, when set, names
+// the environment variable that holds the API key; the value is never logged
+// or returned in an error.
+func ClientFromConfig(baseURL, keyEnv string) (*Client, error) {
+	base := baseURL
+	if base == "" {
+		base = firstEnv("CROSSWIRE_LLM_BASE_URL", "OPENAI_BASE_URL")
+	}
 	if base == "" {
 		base = "https://api.openai.com/v1"
 	}
-	key := firstEnv("CROSSWIRE_LLM_API_KEY", "OPENAI_API_KEY")
+	var key string
+	if keyEnv != "" {
+		key = os.Getenv(keyEnv)
+		if key == "" {
+			return nil, fmt.Errorf("no LLM API key: environment variable %s is empty or unset", keyEnv)
+		}
+	} else {
+		key = firstEnv("CROSSWIRE_LLM_API_KEY", "OPENAI_API_KEY")
+	}
 	if key == "" {
 		return nil, errors.New("no LLM API key: set CROSSWIRE_LLM_API_KEY or OPENAI_API_KEY")
 	}
@@ -94,11 +116,20 @@ func ClientFromEnv() (*Client, error) {
 	if model == "" {
 		model = "gpt-4o-mini"
 	}
+	var temp float64
+	if v := os.Getenv("CROSSWIRE_LLM_TEMPERATURE"); v != "" {
+		t, err := strconv.ParseFloat(v, 64)
+		if err != nil || t < 0 || t > 2 {
+			return nil, fmt.Errorf("CROSSWIRE_LLM_TEMPERATURE %q: want a number from 0 to 2", v)
+		}
+		temp = t
+	}
 	return &Client{
-		BaseURL: strings.TrimRight(base, "/"),
-		APIKey:  key,
-		Model:   model,
-		HTTP:    &http.Client{Timeout: 60 * time.Second},
+		BaseURL:     strings.TrimRight(base, "/"),
+		APIKey:      key,
+		Model:       model,
+		Temperature: temp,
+		HTTP:        &http.Client{Timeout: 60 * time.Second},
 	}, nil
 }
 
@@ -164,6 +195,24 @@ func (c *Client) RunPrompt(ctx context.Context, system, user string, tools []Too
 	return c.loop(ctx, msgs, tools, byName, policy, maxTurns)
 }
 
+// RunPromptHidden is RunPrompt with a second tool set that is callable but
+// not offered to the model. A model that names a hidden tool anyway reaches
+// its handler, so the call can be refused and recorded.
+func (c *Client) RunPromptHidden(ctx context.Context, system, user string, tools, hidden []Tool, policy Policy, maxTurns int) (*Result, error) {
+	if maxTurns <= 0 {
+		maxTurns = 4
+	}
+	byName := map[string]Tool{}
+	for _, t := range hidden {
+		byName[t.Name] = t
+	}
+	for _, t := range tools {
+		byName[t.Name] = t
+	}
+	msgs := []message{{Role: "system", Content: system}, {Role: "user", Content: user}}
+	return c.loop(ctx, msgs, tools, byName, policy, maxTurns)
+}
+
 func (c *Client) loop(ctx context.Context, msgs []message, exposed []Tool, byName map[string]Tool, policy Policy, maxTurns int) (*Result, error) {
 	res := &Result{Policy: policy, Model: c.Model}
 	for turn := 0; turn < maxTurns; turn++ {
@@ -195,6 +244,7 @@ func (c *Client) loop(ctx context.Context, msgs []message, exposed []Tool, byNam
 				out, err := tool.Handler(ctx, args, policy)
 				if err != nil {
 					act.Blocked = true
+					act.Error = err.Error()
 					act.Result = "refused: " + err.Error()
 				} else {
 					act.Result = out
@@ -230,7 +280,7 @@ func (c *Client) chat(ctx context.Context, msgs []message, tools []Tool) (messag
 	body := map[string]any{
 		"model":       c.Model,
 		"messages":    msgs,
-		"temperature": 0,
+		"temperature": c.Temperature,
 	}
 	if len(tools) > 0 {
 		defs := make([]map[string]any, 0, len(tools))
@@ -301,7 +351,7 @@ func (c *Client) Complete(ctx context.Context, system, user, imageURI string, js
 			{"role": "system", "content": system},
 			{"role": "user", "content": userContent},
 		},
-		"temperature": 0,
+		"temperature": c.Temperature,
 	}
 	if jsonOut {
 		body["response_format"] = map[string]any{"type": "json_object"}
@@ -320,6 +370,21 @@ func (c *Client) Complete(ctx context.Context, system, user, imageURI string, js
 		return "", fmt.Errorf("llm returned unparseable body: %s", truncate(string(raw), 300))
 	}
 	return parsed.Choices[0].Message.Content, nil
+}
+
+// OpenAIClient returns a client for OpenAI itself (OPENAI_API_KEY and
+// OPENAI_BASE_URL), used for speech recognition when the chat model comes
+// from another provider.
+func OpenAIClient() (*Client, error) {
+	key := os.Getenv("OPENAI_API_KEY")
+	if key == "" {
+		return nil, errors.New("speech recognition needs OPENAI_API_KEY when the chat model uses another provider")
+	}
+	base := os.Getenv("OPENAI_BASE_URL")
+	if base == "" {
+		base = "https://api.openai.com/v1"
+	}
+	return &Client{BaseURL: strings.TrimRight(base, "/"), APIKey: key, Model: "gpt-4o-mini", HTTP: &http.Client{Timeout: 60 * time.Second}}, nil
 }
 
 // Transcribe sends a WAV to the OpenAI-compatible /audio/transcriptions

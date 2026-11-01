@@ -259,6 +259,9 @@ func Parse(raw, responsePath, actionsPath, perceivedPath string) (string, []mode
 						} else if args, ok := m["args"].(map[string]any); ok {
 							a.Arguments = args
 						}
+						a.Result, _ = m["result"].(string)
+						a.Error, _ = m["error"].(string)
+						a.Blocked, _ = m["blocked"].(bool)
 						if a.Name != "" {
 							actions = append(actions, a)
 						}

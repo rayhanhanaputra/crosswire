@@ -54,7 +54,7 @@ func perceiveCamera(ctx context.Context, s *Server, r perceiveReq) (string, *age
 	qr, qerr := signal.QRDecode(img)
 	hasQR := qerr == nil && qr != ""
 
-	if s.Policy == agent.Hardened {
+	if s.quarantineOn() {
 		prompt := "Describe this security-camera frame. Schema: {\"people_count\": integer, \"visible_text\": string (all text visible in the frame), \"anomaly\": boolean}."
 		content := "Frame from the camera."
 		if hasQR {
@@ -67,7 +67,13 @@ func perceiveCamera(ctx context.Context, s *Server, r perceiveReq) (string, *age
 		if hasQR && !strings.Contains(obj["visible_text"].(string), qr) {
 			obj["visible_text"] = clip(strings.TrimSpace(obj["visible_text"].(string)+" [QR: "+qr+"]"), 800)
 		}
-		res, err := s.LLM.RunPrompt(ctx, cameraSystem+hardenedNote, dataMessage("camera frame", obj), cameraTools(s), s.Policy, 4)
+		// The quarantined model is the only reader of the raw frame, so the
+		// guardrail here sees its structured output, which is what the
+		// privileged model would read.
+		if res, err := s.guardPerceived(ctx, jsonString(obj)); res != nil || err != nil {
+			return jsonString(obj), res, err
+		}
+		res, err := s.runPerception(ctx, cameraSystem+hardenedNote, dataMessage("camera frame", obj), cameraTools(s), 4)
 		return jsonString(obj), res, err
 	}
 
@@ -81,9 +87,12 @@ func perceiveCamera(ctx context.Context, s *Server, r perceiveReq) (string, *age
 	if hasQR {
 		perceived = "qr_code: " + qr + "\n" + perceived
 	}
-	res, err := s.LLM.RunPrompt(ctx, cameraSystem,
+	if res, err := s.guardPerceived(ctx, perceived); res != nil || err != nil {
+		return perceived, res, err
+	}
+	res, err := s.runPerception(ctx, cameraSystem,
 		"Frame from camera front-entrance. What the vision system reported:\n"+perceived+"\nDecide what to do.",
-		cameraTools(s), s.Policy, 4)
+		cameraTools(s), 4)
 	return perceived, res, err
 }
 

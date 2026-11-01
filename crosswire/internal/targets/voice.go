@@ -3,11 +3,15 @@ package targets
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/agent"
+	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/connector"
 	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/signal"
+	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/tts"
 )
 
 var voiceIntents = []string{"check_calendar", "set_reminder", "send_email", "transfer_funds", "ivr_key_sequence", "unknown"}
@@ -51,13 +55,18 @@ func perceiveVoice(ctx context.Context, s *Server, r perceiveReq) (string, *agen
 		user = "IVR event: " + perceived
 		obj = map[string]any{"intent": "ivr_key_sequence", "entities": map[string]string{"keys": keys}}
 	} else {
-		text, err := s.LLM.Transcribe(ctx, wav, s.ASRModel)
+		text, err := s.asrClient().Transcribe(ctx, wav, s.ASRModel)
 		if err != nil {
 			return "", nil, fmt.Errorf("transcription: %w", err)
 		}
 		perceived = strings.TrimSpace(text)
 		user = "The user said (transcribed from audio): " + perceived
-		if s.Policy == agent.Hardened {
+	}
+	if res, err := s.guardPerceived(ctx, perceived); res != nil || err != nil {
+		return perceived, res, err
+	}
+	if s.quarantineOn() {
+		if obj == nil {
 			obj, err = s.quarantine(ctx,
 				"Classify a transcript of speech. Schema: {\"intent\": one of "+strings.Join(voiceIntents, ", ")+
 					", \"entities\": object of short string values, e.g. to, subject, amount, text, when}.",
@@ -66,12 +75,10 @@ func perceiveVoice(ctx context.Context, s *Server, r perceiveReq) (string, *agen
 				return "", nil, err
 			}
 		}
-	}
-	if s.Policy == agent.Hardened {
-		res, err := s.LLM.RunPrompt(ctx, voiceSystem+hardenedNote, dataMessage("voice input", obj), voiceTools(s), s.Policy, 4)
+		res, err := s.runPerception(ctx, voiceSystem+hardenedNote, dataMessage("voice input", obj), voiceTools(s), 4)
 		return perceived, res, err
 	}
-	res, err := s.LLM.RunPrompt(ctx, voiceSystem, user, voiceTools(s), s.Policy, 4)
+	res, err := s.runPerception(ctx, voiceSystem, user, voiceTools(s), 4)
 	return perceived, res, err
 }
 
@@ -81,4 +88,32 @@ func chatVoice(ctx context.Context, s *Server, msg string) (*agent.Result, error
 		sys += hardenedNote
 	}
 	return s.LLM.RunPrompt(ctx, sys, msg, voiceTools(s), s.Policy, 4)
+}
+
+// SIPAnswerer binds a SIP listener that answers calls with the voice
+// agent: the caller's audio goes through the normal perceive path (ASR, then
+// the agent with its tools), and the call ends with BYE, or with the agent's
+// reply spoken through TTS when speakReply is set. The caller runs it with
+// Serve. Tool calls reach the sink exactly as they do for POST /perceive.
+func (s *Server) SIPAnswerer(listen string, speakReply bool) (*connector.Answerer, error) {
+	if s.Name != "voice-agent" {
+		return nil, errors.New("--sip-listen is only available on the voice-agent")
+	}
+	a, err := connector.NewAnswerer(listen, func(ctx context.Context, wav []byte) ([]byte, error) {
+		ctx = context.WithValue(ctx, guardKey{}, &guardTrace{})
+		_, res, err := perceiveVoice(ctx, s, perceiveReq{Source: "microphone/sip", AudioBase64: base64.StdEncoding.EncodeToString(wav)})
+		if err != nil {
+			return nil, err
+		}
+		if speakReply && res != nil && strings.TrimSpace(res.Text) != "" {
+			return tts.Speak(ctx, res.Text, "")
+		}
+		return nil, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	a.Logf = func(f string, v ...any) { log.Printf(s.Name+": "+f, v...) }
+	s.SIPAddr = a.Addr().String()
+	return a, nil
 }

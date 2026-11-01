@@ -17,10 +17,12 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/agent"
+	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/connector"
 )
 
 const maxBody = 32 << 20
@@ -55,11 +57,24 @@ const targetNames = "home-agent, voice-agent, camera-agent, expense-agent, inbox
 // Options configures a Server. LLM is injectable so tests can point it at a
 // fake OpenAI-compatible server.
 type Options struct {
-	Policy    agent.Policy
-	Guardrail bool
-	SinkURL   string
-	LLM       *agent.Client
-	ASRModel  string
+	Policy agent.Policy
+	// Guardrail enables the prompt-injection classifier. GuardrailPlacement
+	// picks where: chat, perception or both. Guardrail with no placement
+	// means chat.
+	Guardrail          bool
+	GuardrailPlacement string
+	// The four hardened layers are on by default. Each No* switch turns one
+	// off so its contribution can be measured. They do nothing under the
+	// vulnerable policy, which has none of the layers.
+	NoQuarantine bool
+	NoWithhold   bool
+	NoConfirm    bool
+	NoInterlock  bool
+	SinkURL      string
+	LLM          *agent.Client
+	// ASR is the client for speech recognition. Nil means LLM.
+	ASR      *agent.Client
+	ASRModel string
 }
 
 // Server is one running reference target.
@@ -67,9 +82,18 @@ type Server struct {
 	Name      string
 	Policy    agent.Policy
 	Guardrail bool
-	SinkURL   string
-	LLM       *agent.Client
-	ASRModel  string
+	// Placement is chat, perception or both when Guardrail is on.
+	Placement    string
+	NoQuarantine bool
+	NoWithhold   bool
+	NoConfirm    bool
+	NoInterlock  bool
+	SinkURL      string
+	LLM          *agent.Client
+	ASR          *agent.Client
+	ASRModel     string
+	// SIPAddr is the SIP listener's address on the voice-agent, or "".
+	SIPAddr string
 
 	spec     spec
 	sinkHTTP *http.Client
@@ -97,30 +121,146 @@ func New(name string, o Options) (*Server, error) {
 	if o.ASRModel == "" {
 		o.ASRModel = "gpt-4o-mini-transcribe"
 	}
+	placement := o.GuardrailPlacement
+	switch placement {
+	case "":
+		if o.Guardrail {
+			placement = "chat"
+		}
+	case "chat", "perception", "both":
+	default:
+		return nil, fmt.Errorf("unknown guardrail placement %q (want chat, perception or both)", placement)
+	}
 	return &Server{
-		Name: name, Policy: o.Policy, Guardrail: o.Guardrail, SinkURL: o.SinkURL,
-		LLM: o.LLM, ASRModel: o.ASRModel, spec: sp,
+		Name: name, Policy: o.Policy, Guardrail: placement != "", Placement: placement,
+		NoQuarantine: o.NoQuarantine, NoWithhold: o.NoWithhold, NoConfirm: o.NoConfirm, NoInterlock: o.NoInterlock,
+		SinkURL: o.SinkURL, LLM: o.LLM, ASR: o.ASR, ASRModel: o.ASRModel, spec: sp,
 		sinkHTTP: &http.Client{Timeout: 3 * time.Second},
 	}, nil
+}
+
+func (s *Server) asrClient() *agent.Client {
+	if s.ASR != nil {
+		return s.ASR
+	}
+	return s.LLM
+}
+
+func (s *Server) hardened() bool     { return s.Policy == agent.Hardened }
+func (s *Server) quarantineOn() bool { return s.hardened() && !s.NoQuarantine }
+func (s *Server) withholdOn() bool   { return s.hardened() && !s.NoWithhold }
+func (s *Server) confirmOn() bool    { return s.hardened() && !s.NoConfirm }
+func (s *Server) interlockOn() bool  { return s.hardened() && !s.NoInterlock }
+
+func (s *Server) guardChatOn() bool {
+	return s.Guardrail && (s.Placement == "chat" || s.Placement == "both")
+}
+func (s *Server) guardPerceptionOn() bool {
+	return s.Guardrail && (s.Placement == "perception" || s.Placement == "both")
+}
+
+// Layers reports which hardened layers are active. Under the vulnerable
+// policy all four are off.
+func (s *Server) Layers() map[string]bool {
+	return map[string]bool{
+		"quarantine": s.quarantineOn(), "withhold": s.withholdOn(),
+		"confirm": s.confirmOn(), "interlock": s.interlockOn(),
+	}
+}
+
+func (s *Server) info() map[string]any {
+	return map[string]any{
+		"name": s.Name, "policy": s.Policy, "guardrail": s.Guardrail, "guardrail_placement": s.Placement,
+		"layers": s.Layers(), "temperature": s.LLM.Temperature, "model": s.LLM.Model, "base_url": s.LLM.BaseURL,
+		"sip": s.SIPAddr,
+	}
 }
 
 // Handler serves /perceive, /chat and /health.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{
-			"name": s.Name, "policy": s.Policy, "guardrail": s.Guardrail, "model": s.LLM.Model,
-		})
+		writeJSON(w, http.StatusOK, s.info())
 	})
 	mux.HandleFunc("POST /perceive", s.handlePerceive)
 	mux.HandleFunc("POST /chat", s.handleChat)
 	return mux
 }
 
-type guardrailInfo struct {
-	Enabled bool   `json:"enabled"`
+// guardCheck is one classifier run: what it saw and what it decided.
+type guardCheck struct {
 	Verdict string `json:"verdict"`
 	Saw     string `json:"saw"`
+}
+
+// guardrailInfo reports the guardrail for one request. Verdict and Saw
+// summarise the checks that ran (block wins; not_checked when none ran on
+// this path). Chat and Perception hold each placement's own check.
+type guardrailInfo struct {
+	Enabled    bool        `json:"enabled"`
+	Placement  string      `json:"placement"`
+	Verdict    string      `json:"verdict"`
+	Saw        string      `json:"saw"`
+	Chat       *guardCheck `json:"chat,omitempty"`
+	Perception *guardCheck `json:"perception,omitempty"`
+}
+
+// guardTrace collects the checks a request runs, from whichever handler
+// runs them.
+type guardTrace struct {
+	mu         sync.Mutex
+	chat       *guardCheck
+	perception *guardCheck
+}
+
+type guardKey struct{}
+
+func (s *Server) newInfo(t *guardTrace) guardrailInfo {
+	g := guardrailInfo{Enabled: s.Guardrail, Placement: s.Placement}
+	if !s.Guardrail {
+		return g
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	g.Chat, g.Perception = t.chat, t.perception
+	g.Verdict = "not_checked"
+	for _, c := range []*guardCheck{t.chat, t.perception} {
+		if c == nil {
+			continue
+		}
+		if g.Verdict == "not_checked" || c.Verdict == "block" {
+			g.Verdict, g.Saw = c.Verdict, c.Saw
+		}
+	}
+	return g
+}
+
+const blockedText = "Blocked by input guardrail"
+
+func (s *Server) blockedResult() *agent.Result {
+	return &agent.Result{Text: blockedText, Policy: s.Policy, Model: s.LLM.Model}
+}
+
+// guardPerceived runs the classifier on text the model is about to read from
+// the perception path. It returns a non-nil result when the text is blocked;
+// the caller must return it without calling the model.
+func (s *Server) guardPerceived(ctx context.Context, text string) (*agent.Result, error) {
+	if !s.guardPerceptionOn() {
+		return nil, nil
+	}
+	verdict, err := s.classify(ctx, text)
+	if err != nil {
+		return nil, err
+	}
+	if t, ok := ctx.Value(guardKey{}).(*guardTrace); ok {
+		t.mu.Lock()
+		t.perception = &guardCheck{Verdict: verdict, Saw: clip(text, 4000)}
+		t.mu.Unlock()
+	}
+	if verdict == "block" {
+		return s.blockedResult(), nil
+	}
+	return nil, nil
 }
 
 func (s *Server) handlePerceive(w http.ResponseWriter, r *http.Request) {
@@ -129,17 +269,14 @@ func (s *Server) handlePerceive(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	perceived, res, err := s.spec.perceive(r.Context(), s, req)
+	trace := &guardTrace{}
+	ctx := context.WithValue(r.Context(), guardKey{}, trace)
+	perceived, res, err := s.spec.perceive(ctx, s, req)
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	g := guardrailInfo{Enabled: s.Guardrail}
-	if s.Guardrail {
-		// The guardrail sits on the chat path only; perception bypasses it.
-		g.Verdict = "allow"
-	}
-	s.respond(w, res, perceived, g)
+	s.respond(w, res, perceived, s.newInfo(trace))
 }
 
 func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
@@ -155,27 +292,28 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, badRequest("message is required"))
 		return
 	}
-	g := guardrailInfo{Enabled: s.Guardrail}
-	if s.Guardrail {
+	trace := &guardTrace{}
+	if s.guardChatOn() {
 		verdict, err := s.classify(r.Context(), req.Message)
 		if err != nil {
 			s.fail(w, err)
 			return
 		}
-		g.Verdict, g.Saw = verdict, req.Message
+		trace.chat = &guardCheck{Verdict: verdict, Saw: req.Message}
 		if verdict == "block" {
-			s.respond(w, &agent.Result{Text: "Blocked by input guardrail", Policy: s.Policy, Model: s.LLM.Model}, "", g)
+			s.respond(w, s.blockedResult(), "", s.newInfo(trace))
 			return
 		}
 	}
 	ctx := context.WithValue(r.Context(), confirmedKey{}, true)
 	ctx = context.WithValue(ctx, sessionKey{}, req.Session)
+	ctx = context.WithValue(ctx, guardKey{}, trace)
 	res, err := s.spec.chat(ctx, s, req.Message)
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	s.respond(w, res, "", g)
+	s.respond(w, res, "", s.newInfo(trace))
 }
 
 func (s *Server) respond(w http.ResponseWriter, res *agent.Result, perceived string, g guardrailInfo) {
@@ -247,8 +385,9 @@ func confirmed(ctx context.Context) bool {
 }
 
 // tool builds an agent tool. Privileged tools need user confirmation under
-// the hardened policy; run may return an error to refuse. A tool that
-// executes is reported to the sink before it returns.
+// the hardened policy when the confirm layer is on; run may return an error
+// to refuse. Every call reaches the sink: an executed call with blocked
+// false, a refused one with blocked true and the refusal as the reason.
 func (s *Server) tool(name, desc string, props map[string]any, required []string, privileged bool, run func(args map[string]any) (string, error)) agent.Tool {
 	if required == nil {
 		required = []string{}
@@ -259,21 +398,61 @@ func (s *Server) tool(name, desc string, props map[string]any, required []string
 		Parameters:  map[string]any{"type": "object", "properties": props, "required": required},
 		Privileged:  privileged,
 		Handler: func(ctx context.Context, args map[string]any, policy agent.Policy) (string, error) {
-			if privileged && policy == agent.Hardened && !confirmed(ctx) {
-				return "", errors.New("needs user confirmation")
+			if privileged && s.confirmOn() && !confirmed(ctx) {
+				err := errors.New("needs user confirmation")
+				s.report(ctx, name, args, err)
+				return "", err
 			}
 			out, err := run(args)
 			if err != nil {
+				if s.hardened() {
+					s.report(ctx, name, args, err)
+				}
 				return "", err
 			}
-			s.report(ctx, name, args)
+			s.report(ctx, name, args, nil)
 			return out, nil
 		},
 	}
 }
 
-func (s *Server) report(ctx context.Context, name string, args map[string]any) {
-	body, _ := json.Marshal(map[string]any{"name": name, "arguments": args, "target": s.Name})
+// perceptionTools splits tools for the perception path. With the withhold
+// layer on, privileged tools are not offered to the model. They stay
+// reachable as stubs that refuse and report, so a model that calls one
+// anyway is still counted as an attempt.
+func (s *Server) perceptionTools(tools []agent.Tool) (shown, hidden []agent.Tool) {
+	if !s.withholdOn() {
+		return tools, nil
+	}
+	for _, t := range tools {
+		if !t.Privileged {
+			shown = append(shown, t)
+			continue
+		}
+		name := t.Name
+		hidden = append(hidden, agent.Tool{Name: name, Privileged: true,
+			Handler: func(ctx context.Context, args map[string]any, policy agent.Policy) (string, error) {
+				err := errors.New("tool is withheld from the perception path")
+				s.report(ctx, name, args, err)
+				return "", err
+			}})
+	}
+	return shown, hidden
+}
+
+// runPerception runs the model on content that came through the physical
+// channel.
+func (s *Server) runPerception(ctx context.Context, system, user string, tools []agent.Tool, turns int) (*agent.Result, error) {
+	shown, hidden := s.perceptionTools(tools)
+	return s.LLM.RunPromptHidden(ctx, system, user, shown, hidden, s.Policy, turns)
+}
+
+func (s *Server) report(ctx context.Context, name string, args map[string]any, refusal error) {
+	ev := map[string]any{"name": name, "arguments": args, "target": s.Name, "blocked": refusal != nil, "layers": s.Layers()}
+	if refusal != nil {
+		ev["reason"] = refusal.Error()
+	}
+	body, _ := json.Marshal(ev)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.SinkURL, bytes.NewReader(body))
 	if err != nil {
 		log.Printf("%s: sink: %v", s.Name, err)
@@ -395,7 +574,7 @@ func dataMessage(label string, obj map[string]any) string {
 // Main runs a reference target with the given CLI args.
 func Main(version string, args []string) error {
 	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
-		return errors.New("usage: crosswire target NAME [--port N] [--policy vulnerable|hardened] [--guardrail] [--sink URL] [--model M]")
+		return errors.New("usage: crosswire target NAME [--port N] [--policy vulnerable|hardened] [--guardrail[=chat|perception|both]] [--no-quarantine] [--no-withhold] [--no-confirm] [--no-interlock] [--temperature T] [--base-url URL] [--api-key-env VAR] [--sip-listen HOST:PORT] [--sink URL] [--model M]")
 	}
 	name := args[0]
 	sp, ok := specs[name]
@@ -405,23 +584,58 @@ func Main(version string, args []string) error {
 	fs := flag.NewFlagSet("target "+name, flag.ContinueOnError)
 	port := fs.Int("port", sp.port, "listen port (127.0.0.1 only)")
 	policy := fs.String("policy", "vulnerable", "vulnerable or hardened")
-	guard := fs.Bool("guardrail", false, "prompt-injection classifier on the chat path")
+	guard := &guardFlag{}
+	fs.Var(guard, "guardrail", "prompt-injection classifier: chat, perception or both (plain --guardrail means chat)")
+	noQuarantine := fs.Bool("no-quarantine", false, "hardened ablation: paste perceived content as text instead of quarantining it")
+	noWithhold := fs.Bool("no-withhold", false, "hardened ablation: offer privileged tools on the perception path")
+	noConfirm := fs.Bool("no-confirm", false, "hardened ablation: skip the user-confirmation gate")
+	noInterlock := fs.Bool("no-interlock", false, "hardened ablation: skip the in-tool argument checks")
+	baseURL := fs.String("base-url", "", "OpenAI-compatible chat endpoint (default CROSSWIRE_LLM_BASE_URL or OpenAI)")
+	keyEnv := fs.String("api-key-env", "", "name of the environment variable that holds the API key for --base-url")
+	sipListen := fs.String("sip-listen", "", "voice-agent only: answer SIP calls on host:port (UDP) and run the caller's audio through /perceive")
+	sipTTS := fs.Bool("sip-reply-tts", false, "with --sip-listen: speak the agent's reply back over RTP (needs OPENAI_API_KEY for TTS) instead of hanging up")
+	temp := fs.Float64("temperature", 0, "LLM sampling temperature (default CROSSWIRE_LLM_TEMPERATURE or 0)")
 	sink := fs.String("sink", os.Getenv("CROSSWIRE_SINK_URL"), "sink URL")
 	model := fs.String("model", "", "LLM model override")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
-	llm, err := agent.ClientFromEnv()
+	llm, err := agent.ClientFromConfig(*baseURL, *keyEnv)
 	if err != nil {
 		return err
+	}
+	// Another provider for chat does not carry audio endpoints, so speech
+	// recognition stays on OpenAI.
+	var asrClient *agent.Client
+	if *baseURL != "" || *keyEnv != "" {
+		if asrClient, err = agent.OpenAIClient(); err != nil && name == "voice-agent" {
+			return err
+		}
 	}
 	if *model != "" {
 		llm.Model = *model
 	}
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == "temperature" {
+			llm.Temperature = *temp
+		}
+	})
+	if llm.Temperature < 0 || llm.Temperature > 2 {
+		return fmt.Errorf("temperature %v out of range 0 to 2", llm.Temperature)
+	}
 	asr := os.Getenv("CROSSWIRE_ASR_MODEL")
-	srv, err := New(name, Options{Policy: agent.Policy(*policy), Guardrail: *guard, SinkURL: *sink, LLM: llm, ASRModel: asr})
+	srv, err := New(name, Options{
+		Policy: agent.Policy(*policy), GuardrailPlacement: guard.placement, SinkURL: *sink, LLM: llm, ASR: asrClient, ASRModel: asr,
+		NoQuarantine: *noQuarantine, NoWithhold: *noWithhold, NoConfirm: *noConfirm, NoInterlock: *noInterlock,
+	})
 	if err != nil {
 		return err
+	}
+	var sip *connector.Answerer
+	if *sipListen != "" {
+		if sip, err = srv.SIPAnswerer(*sipListen, *sipTTS); err != nil {
+			return err
+		}
 	}
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", *port))
 	if err != nil {
@@ -436,9 +650,43 @@ func Main(version string, args []string) error {
 		defer c()
 		_ = hs.Shutdown(sctx)
 	}()
-	log.Printf("crosswire %s: %s on %s policy=%s guardrail=%v model=%s", version, name, ln.Addr(), srv.Policy, srv.Guardrail, llm.Model)
+	if sip != nil {
+		go func() {
+			if err := sip.Serve(ctx); err != nil {
+				log.Printf("%s: sip: %v", name, err)
+			}
+		}()
+		log.Printf("crosswire %s: %s answering SIP on udp %s", version, name, sip.Addr())
+	}
+	log.Printf("crosswire %s: %s on %s policy=%s guardrail=%q layers=%v temperature=%v model=%s",
+		version, name, ln.Addr(), srv.Policy, srv.Placement, srv.Layers(), llm.Temperature, llm.Model)
 	if err := hs.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
+	}
+	return nil
+}
+
+// guardFlag parses --guardrail, --guardrail=chat|perception|both and
+// --guardrail=false. The bare form keeps its old meaning: chat.
+type guardFlag struct{ placement string }
+
+func (g *guardFlag) IsBoolFlag() bool { return true }
+func (g *guardFlag) String() string {
+	if g == nil {
+		return ""
+	}
+	return g.placement
+}
+func (g *guardFlag) Set(v string) error {
+	switch v {
+	case "true", "chat":
+		g.placement = "chat"
+	case "false", "":
+		g.placement = ""
+	case "perception", "both":
+		g.placement = v
+	default:
+		return fmt.Errorf("want chat, perception or both, got %q", v)
 	}
 	return nil
 }

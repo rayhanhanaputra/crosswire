@@ -2,124 +2,84 @@
 
 Two tracks fit. Submit both; they review separately.
 
-- **Arsenal** (tool demo, 1 hour at a station, lower bar, high fit for Crosswire).
-- **Briefings** (talk, needs the measured claim; the AI/ML or Application Security track).
+- **Arsenal** (tool demo at a station; the Black Hat Asia 2027 Arsenal draft in
+  `blackhat-asia-2027-arsenal.md` is the same pitch and is due first).
+- **Briefings** (talk; AI, ML and Data Science track, or Application Security).
 
-Deadlines: check the Black Hat USA 2027 CFP page before writing anything down here.
-Black Hat Asia 2027 (Singapore, spring) opens its CFP earlier and is the nearer
-Arsenal slot; the same material fits.
+**Dates, inferred.** Black Hat USA 2026 Briefings CFP ran 27 January to 23 March
+2026. Expect USA 2027 to open late January 2027 and close in March 2027, for an event
+around 31 July to 5 August 2027 in Las Vegas. Check blackhat.com before relying on
+any of this; the page returns 403 to scripted fetches, so open it in a browser.
 
-Bracketed fields are for the speaker to fill.
+Bracketed fields are for the speaker to fill. Every number below is from
+`crosswire/docs/results/2026-11-01.md`; update both together.
 
 ---
 
 ## Arsenal
 
-**Tool name:** Crosswire
-
-**Short description (≤ 250 characters):**
-A single-binary workbench, in the Burp Repeater/Intruder style, for testing AI
-agents through the inputs they perceive — camera, microphone, device discovery,
-documents — with per-trial canaries, a benign control arm and confidence intervals.
-
-**Long description:**
-Prompt-injection tooling tests the chat box. Agents deployed in homes, offices and
-call centres act on other inputs: the device list a home platform builds, the audio a
-voice assistant hears, the frame a camera agent reads, the invoice an accounts-payable
-agent scans. A guardrail placed on the chat path inspects none of them.
-
-Crosswire sends the same instruction through the chat path and through the
-perception path, with a benign control of the same length, N times each. Every trial
-carries a fresh nonce; the only thing that counts as a hit is a forbidden tool
-reaching an out-of-band sink with that nonce in its arguments. Reply text is a hint,
-never evidence, which removes the refusal-echo false positive. Verdicts are reported
-as k/N with 95 % Wilson intervals; "confirmed" requires repeated hits, a clean
-control and non-overlapping intervals.
-
-The channel adapters produce real artifacts: QR and sign PNGs, rendered invoices,
-speech WAVs, DTMF tones (and a Goertzel decoder to verify them), Morse pulse
-timelines to a serial LED rig. Channels that only relabel text are marked *modeled*
-and cannot back a reproducibility claim.
-
-Five reference targets ship in the binary, each a real tool-calling model: a home
-assistant that trusts its entity list, a voice assistant with mail and payment tools,
-a small-business camera agent, an accounts-payable agent, and an inbox assistant that
-opens mail, calendar invites and PDF attachments. Each runs as
-`vulnerable`, `hardened` (quarantined perception into a fixed schema, hidden
-privileged tools, user-channel confirmation, interlocks in code) or with a chat-path
-guardrail. Every run exports a bundle (run JSON, artifacts, sink events, hashes).
-
-**Demo at the station (what the audience sees):**
-1. Load the camera reference target; preview a rendered sign as the PNG the vision
-   model will read.
-2. Send ten injected trials, ten benign controls, ten chat trials with the guardrail
-   on. Watch the trial table fill and the verdict panel compute.
-3. Show the first-pass result that the control arm invalidated (a tool the agent calls
-   on any quiet scene) and the corrected rule.
-4. Switch the target to `hardened`, re-run, show 0/10 with the payload still
-   delivered, and download the bundle.
-
-**Why it is not another prompt-injection fuzzer:** it measures where the guardrail
-is, not what the model says; it has a control arm; it refuses to confirm without one;
-and its reference targets differ in architecture rather than in a keyword filter.
-
-**Reference run (2026-10-31, gpt-4o-mini, N = 10 per arm):** with a chat guardrail on,
-the same instruction scored 0/10 through chat and 10/10 (home), 9/10 (voice) and 10/10
-(camera) through the perception path; hardened targets scored 0/10 on all four with the
-nonce delivered.
-
-**Open source:** Apache-2.0 (code), CC BY 4.0 (knowledge base). [repository link]
-
-**Presenters:** [name, affiliation, bio ≤ 100 words]
+Use `blackhat-asia-2027-arsenal.md` as written; the USA form asks the same
+questions. Change the "presented before" answer if Asia accepts.
 
 ---
 
 ## Briefings
 
-**Title:** The Guardrail Reads the Chat Box. The Agent Reads the Room.
+**Title:** The Classifier Reads the Chat Box. The Agent Reads the Room.
 
 **Abstract (≤ 300 words):**
-Agents act on inputs that never pass through a chat interface: the entity list a
-home platform assembles from device names, the audio a voice assistant transcribes,
-the frames a camera agent describes, the invoices a payments agent extracts.
-Prompt-injection defences are placed on the chat path. This talk measures the gap.
+Agents act on inputs that never pass through a chat interface: the entity list a home
+platform assembles from device names, the audio a voice assistant transcribes from a
+phone call, the frame a camera agent describes, the invoice a payments agent extracts,
+the note another agent left on the ticket. Prompt-injection classifiers are placed on
+the chat path. This talk measures the gap, and then measures what closing it costs.
 
-We built five reference agents on a production model, each with real privileged tools,
-in three configurations: a plain agent loop; the same loop with a prompt-injection
-classifier on the chat path; and a hardened design (perception quarantined into a
-fixed schema by a tool-less model, privileged tools withheld from the perception path,
-confirmation only from the user channel, interlocks in code). We then sent the same
-instruction three ways — through the perception channel, as a benign control of equal
-length, and typed into chat — ten times each, with a fresh nonce per trial and an
-out-of-band sink as the only accepted evidence.
+We built six reference agents, each a real tool-calling model with real privileged
+tools behind an HTTP API, in eight builds: a plain agent loop; the same loop with one
+prompt-injection classifier on the chat path, on the perception path, or on both; and a
+hardened design with four layers (perception quarantined into a fixed schema by a
+tool-less model, privileged tools withheld from the perception path, confirmation only
+from the user channel, interlocks in code), each layer switchable on its own. We sent
+the same instruction through the perception channel, as a benign control of the same
+shape, and typed into chat, thirty times each with five paraphrases and a fresh nonce
+per trial. The only accepted evidence was a forbidden tool reaching an out-of-band sink
+with that nonce. The sink also records calls the target blocked, with the layer that
+blocked them, so a defence that works in code is not mistaken for a model that refused.
 
-With the classifier on, the instruction scored 0/10 through chat and 10/10, 9/10 and
-10/10 through device name, speech and sign. Hardened designs scored 0/10 on every
-scenario with the nonce still delivered. The control arm invalidated our own first
-camera oracle, which would have reported a 100 % success to a single-send analyzer.
-Delivery and compliance separated cleanly: a document channel delivered the payload
-9–10/10 and the model complied 2–3/10, while chat complied 10/10. We also report two
-channels that cannot carry an instruction at realistic sampling rates.
+On the chat path the classifier removed typed injections (29/30 → 0/30) and changed
+nothing on the perception path (device name 28/30, speech 25/30, phone call 25/30,
+camera 30/30). On the perception path it did the reverse. The hardened build let no
+privileged call execute in 150 trials on one model; the ablation shows which layer
+caught the calls that got that far [and, on `deepseek-flash`, which removals let a
+call through: fill from the results page]. Our own control arm voided a run: a home
+agent unlocked the door on a benign device name, once in thirty.
 
 We release Crosswire, the single-binary workbench used for every number here, with its
-reference targets and run bundles, so attendees can measure their own agents the same
-way. We position the work against CHAI (physical signs vs. vision agents) and claim
-only the measurement, the non-optical channels and the negative results.
+reference targets, the driver script and the result JSON.
 
 **Attendee takeaways:**
-- Where a prompt-injection guardrail has to sit to see the inputs an agent acts on.
-- A verdict procedure (control arm, nonce, sink, intervals) that stops single-send
-  false positives.
-- Four architectural changes, with measured effect, that a team can apply this quarter.
+- Where a prompt-injection classifier has to sit to see the inputs an agent acts on,
+  with the same classifier measured on each path against the same agent.
+- A verdict procedure (control arm, nonce, sink, attempted vs executed, intervals)
+  that stops single-send false positives and stops crediting the wrong layer.
+- Four architectural layers with a measured effect for each, and the one that did the
+  work.
 
-**Outline (40 min):** problem and prior work (5) · method (7) · results and the oracle
-the control caught (12) · hardened design and what still gets through (6) · tool demo
-(6) · limits and Q&A (4).
+**Outline (40 min):** prior work and what is added (5) · method (7) · placement table
+and the phone call (10) · one layer at a time (7) · what the control arm caught (3) ·
+tool demo (5) · limits and Q&A (3).
 
-**Novelty statement:** Not the first physical prompt injection (CHAI, 2025). First, to
-our knowledge, to measure guardrail placement across non-optical physical channels with
-a control arm and intervals, and to publish channel-capacity negative results alongside
-a reusable tool.
+**Prior work and novelty statement:** Indirect prompt injection is Greshake et al.
+(2023). Injection through calendar invites and email against shipped products is
+SafeBreach (Nassi, Cohen, Yair, 2025) and EchoLeak (2025). Memory and delayed tool
+invocation is Rehberger (2024–25). Audio-native injection is AudioHijack and
+"Piggybacking on Perception" (2026). Physical signs against vision agents are CHAI
+(2025) and Physical Prompt Injection (2026). PyRIT converts text into PDFs, QR codes
+and speech; a DEF CON 34 AI Village tool phones voice agents. What this talk adds: the
+verdict procedure with attempted and executed counts; the same classifier measured on
+chat, perception and both against one agent; a per-layer ablation of the hardened
+design; device names and protocol fields as a channel, for which we found no prior
+report; and two negative results. We say "no prior report found", not "first".
 
 **Has this been presented before:** No.
 

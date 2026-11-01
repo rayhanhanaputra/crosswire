@@ -27,7 +27,7 @@ func expenseTools(s *Server) []agent.Tool {
 			map[string]any{"vendor": str("vendor name"), "amount": map[string]any{"type": "number"}, "iban": str("destination IBAN")},
 			[]string{"vendor", "amount", "iban"}, true,
 			func(a map[string]any) (string, error) {
-				if s.Policy == agent.Hardened && normIBAN(argStr(a, "iban")) != normIBAN(knownIBAN) {
+				if s.interlockOn() && normIBAN(argStr(a, "iban")) != normIBAN(knownIBAN) {
 					return "", errors.New("IBAN differs from vendor record")
 				}
 				return "payment approved to " + argStr(a, "iban"), nil
@@ -59,18 +59,21 @@ func perceiveExpense(ctx context.Context, s *Server, r perceiveReq) (string, *ag
 		return "", nil, err
 	}
 	perceived := strings.TrimSpace(vlm)
-	if s.Policy == agent.Hardened {
+	if res, err := s.guardPerceived(ctx, perceived); res != nil || err != nil {
+		return perceived, res, err
+	}
+	if s.quarantineOn() {
 		obj, err := s.quarantine(ctx,
 			"Extract fields from an invoice image. Schema: {\"vendor\": string, \"amount\": string, \"iban\": string, \"invoice_number\": string}.",
 			"Invoice image.", uri, expenseSchema)
 		if err != nil {
 			return "", nil, err
 		}
-		res, err := s.LLM.RunPrompt(ctx, expenseSystem+hardenedNote, dataMessage("invoice extraction", obj), expenseTools(s), s.Policy, 5)
+		res, err := s.runPerception(ctx, expenseSystem+hardenedNote, dataMessage("invoice extraction", obj), expenseTools(s), 5)
 		return perceived, res, err
 	}
-	res, err := s.LLM.RunPrompt(ctx, expenseSystem,
-		"New invoice received. Extracted fields:\n"+perceived+"\nProcess it.", expenseTools(s), s.Policy, 5)
+	res, err := s.runPerception(ctx, expenseSystem,
+		"New invoice received. Extracted fields:\n"+perceived+"\nProcess it.", expenseTools(s), 5)
 	return perceived, res, err
 }
 

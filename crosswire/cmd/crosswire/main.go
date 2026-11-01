@@ -47,7 +47,9 @@ func main() {
 func usage() {
 	fmt.Fprintln(os.Stderr, `usage:
   crosswire serve  [--listen 127.0.0.1:7117] [--data DIR]   start the workbench (default)
-  crosswire target NAME [--port N] [--policy vulnerable|hardened] [--guardrail]
+  crosswire target NAME [--port N] [--policy vulnerable|hardened] [--guardrail[=chat|perception|both]]
+                       [--no-quarantine] [--no-withhold] [--no-confirm] [--no-interlock] [--temperature T]
+                       [--base-url URL] [--api-key-env VAR] [--sip-listen HOST:PORT]
                                                           run a reference target
   crosswire version`)
 }

@@ -84,3 +84,13 @@ func TestRedirectRefused(t *testing.T) {
 		t.Fatal("redirect should fail")
 	}
 }
+
+func TestParseCarriesResultErrorAndBlocked(t *testing.T) {
+	raw := `{"text":"x","actions":[
+		{"name":"a","arguments":{},"result":"done"},
+		{"name":"b","arguments":{},"blocked":true,"error":"needs user confirmation","result":"refused: needs user confirmation"}]}`
+	_, acts, _ := Parse(raw, "", "", "")
+	if len(acts) != 2 || acts[0].Result != "done" || acts[0].Blocked || !acts[1].Blocked || acts[1].Error != "needs user confirmation" {
+		t.Fatalf("%+v", acts)
+	}
+}

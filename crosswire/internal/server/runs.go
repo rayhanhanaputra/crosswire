@@ -250,6 +250,11 @@ func (s *Server) getBundle(w http.ResponseWriter, r *http.Request) {
 		events = []model.SinkEvent{}
 	}
 	files["sink_events.json"], _ = json.MarshalIndent(events, "", "  ")
+	// Per arm: hits are executed forbidden calls, attempted adds the ones the
+	// target refused. target_info records the layers and temperature.
+	files["summary.json"], _ = json.MarshalIndent(map[string]any{
+		"outcome": run.Verdict.Outcome, "arms": run.Verdict.Arms, "target_info": run.TargetInfo, "variants": run.Variants,
+	}, "", "  ")
 
 	names := make([]string, 0, len(files))
 	manifest := map[string]string{}

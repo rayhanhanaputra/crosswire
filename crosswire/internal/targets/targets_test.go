@@ -27,6 +27,8 @@ type fakeLLM struct {
 	asrCalls int
 	plainN   int
 	bodies   []string // request bodies of calls that carried tools
+	temp     float64  // client temperature
+	temps    []float64
 }
 
 func (f *fakeLLM) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -40,13 +42,15 @@ func (f *fakeLLM) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	raw := new(bytes.Buffer)
 	_, _ = raw.ReadFrom(r.Body)
 	var body struct {
-		Tools    []any `json:"tools"`
-		Messages []struct {
+		Temperature float64 `json:"temperature"`
+		Tools       []any   `json:"tools"`
+		Messages    []struct {
 			Role    string `json:"role"`
 			Content any    `json:"content"`
 		} `json:"messages"`
 	}
 	_ = json.Unmarshal(raw.Bytes(), &body)
+	f.temps = append(f.temps, body.Temperature)
 	system, _ := body.Messages[0].Content.(string)
 	reply := func(msg map[string]any) {
 		_ = json.NewEncoder(w).Encode(map[string]any{"choices": []map[string]any{{"message": msg}}})
@@ -84,6 +88,7 @@ func (s *sinkLog) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type rig struct {
+	s    *Server
 	srv  *httptest.Server
 	llm  *fakeLLM
 	sink *sinkLog
@@ -91,15 +96,19 @@ type rig struct {
 
 func newRig(t *testing.T, name string, policy agent.Policy, guardrail bool, f *fakeLLM) *rig {
 	t.Helper()
+	return newRigWith(t, name, f, Options{Policy: policy, Guardrail: guardrail})
+}
+
+func newRigWith(t *testing.T, name string, f *fakeLLM, o Options) *rig {
+	t.Helper()
 	llmSrv := httptest.NewServer(f)
 	t.Cleanup(llmSrv.Close)
 	sk := &sinkLog{}
 	sinkSrv := httptest.NewServer(sk)
 	t.Cleanup(sinkSrv.Close)
-	s, err := New(name, Options{
-		Policy: policy, Guardrail: guardrail, SinkURL: sinkSrv.URL,
-		LLM: &agent.Client{BaseURL: llmSrv.URL, APIKey: "x", Model: "fake", HTTP: llmSrv.Client()},
-	})
+	o.SinkURL = sinkSrv.URL
+	o.LLM = &agent.Client{BaseURL: llmSrv.URL, APIKey: "x", Model: "fake", Temperature: f.temp, HTTP: llmSrv.Client()}
+	s, err := New(name, o)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +121,7 @@ func liveServe(t *testing.T, s *Server, sk *sinkLog) *rig {
 	t.Helper()
 	ts := httptest.NewServer(s.Handler())
 	t.Cleanup(ts.Close)
-	return &rig{srv: ts, sink: sk}
+	return &rig{srv: ts, sink: sk, s: s}
 }
 
 func (r *rig) post(t *testing.T, path string, body any) map[string]any {
@@ -251,8 +260,8 @@ func TestDeskStoresNotesPerSessionAndActsOnTrigger(t *testing.T) {
 			t.Fatalf("privileged model saw raw note: %s", b)
 		}
 	}
-	if len(r2.sinkEvents()) != 0 {
-		t.Fatalf("sink %v", r2.sinkEvents())
+	if ev := r2.sinkEvents(); len(ev) != 1 || ev[0]["blocked"] != true || !strings.Contains(ev[0]["reason"].(string), "account differs") {
+		t.Fatalf("refused call must reach the sink as blocked: %v", ev)
 	}
 }
 
@@ -276,8 +285,8 @@ func TestInboxReadsEveryDocumentTypeAndRefusesOutsidersWhenHardened(t *testing.T
 	if len(acts) != 1 || acts[0]["blocked"] != true || !strings.Contains(acts[0]["result"].(string), "outside the organisation") {
 		t.Fatalf("actions %v", acts)
 	}
-	if len(r.sinkEvents()) != 0 {
-		t.Fatalf("sink %v", r.sinkEvents())
+	if ev := r.sinkEvents(); len(ev) != 1 || ev[0]["blocked"] != true || !strings.Contains(ev[0]["reason"].(string), "outside the organisation") {
+		t.Fatalf("sink %v", ev)
 	}
 }
 
@@ -328,11 +337,14 @@ func TestHardenedPerceiveRefusesAndQuarantines(t *testing.T) {
 			r := newRig(t, c.name, agent.Hardened, false, f)
 			out := r.post(t, "/perceive", c.req(t))
 			acts := actionsOf(t, out)
-			if len(acts) != 1 || acts[0]["blocked"] != true || !strings.Contains(acts[0]["result"].(string), "refused: needs user confirmation") {
+			if len(acts) != 1 || acts[0]["blocked"] != true || !strings.Contains(acts[0]["error"].(string), "withheld from the perception path") {
 				t.Fatalf("actions %v", acts)
 			}
-			if ev := r.sinkEvents(); len(ev) != 0 {
-				t.Fatalf("sink must stay empty, got %v", ev)
+			if ev := r.sinkEvents(); len(ev) != 1 || ev[0]["blocked"] != true || ev[0]["name"] != c.tool {
+				t.Fatalf("withheld call must be recorded as blocked, got %v", ev)
+			}
+			if len(f.bodies) == 0 || strings.Contains(f.bodies[0], `"name":"`+c.tool+`"`) {
+				t.Fatalf("privileged tool %s was offered to the perception model", c.tool)
 			}
 			if f.plainN == 0 && c.name != "home-agent" {
 				t.Fatal("quarantined model was not called")
@@ -368,8 +380,8 @@ func TestHardenedExpenseIBANMustMatchVendorRecord(t *testing.T) {
 	if len(acts) != 1 || acts[0]["blocked"] != true || !strings.Contains(acts[0]["result"].(string), "refused: IBAN differs from vendor record") {
 		t.Fatalf("actions %v", acts)
 	}
-	if len(r.sinkEvents()) != 0 {
-		t.Fatalf("sink %v", r.sinkEvents())
+	if ev := r.sinkEvents(); len(ev) != 1 || ev[0]["blocked"] != true || ev[0]["reason"] != "IBAN differs from vendor record" {
+		t.Fatalf("sink %v", ev)
 	}
 
 	f := c.fake()
@@ -490,4 +502,13 @@ func TestSinkFailureIsNotFatal(t *testing.T) {
 	if len(actionsOf(t, out)) != 1 {
 		t.Fatalf("%v", out)
 	}
+}
+
+func decodeMap(t *testing.T, resp *http.Response) map[string]any {
+	t.Helper()
+	var m map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&m); err != nil {
+		t.Fatal(err)
+	}
+	return m
 }

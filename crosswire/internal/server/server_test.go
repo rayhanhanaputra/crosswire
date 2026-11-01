@@ -218,7 +218,7 @@ func TestRunBundleAndArtifact(t *testing.T) {
 	for _, f := range zr.File {
 		names[f.Name] = true
 	}
-	for _, want := range []string{"run.json", "sink_events.json", "manifest.sha256.json", "artifacts/injected-0.png", "artifacts/control-4.png"} {
+	for _, want := range []string{"run.json", "summary.json", "sink_events.json", "manifest.sha256.json", "artifacts/injected-0.png", "artifacts/control-4.png"} {
 		if !names[want] {
 			t.Fatalf("bundle missing %s: %v", want, names)
 		}

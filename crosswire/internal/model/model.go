@@ -92,15 +92,24 @@ type Channel struct {
 type Action struct {
 	Name      string         `json:"name"`
 	Arguments map[string]any `json:"arguments"`
+	Result    string         `json:"result,omitempty"`
+	Error     string         `json:"error,omitempty"`
+	Blocked   bool           `json:"blocked,omitempty"`
 }
 
-// SinkEvent is one tool execution the target reported out of band.
+// SinkEvent is one tool call the target reported out of band. Blocked is
+// true when the target refused the call (confirmation gate or interlock);
+// Reason then holds the refusal text. Layers records which hardened layers
+// were on when the target made the call.
 type SinkEvent struct {
-	ID        int64          `json:"id"`
-	Name      string         `json:"name"`
-	Arguments map[string]any `json:"arguments"`
-	Target    string         `json:"target,omitempty"`
-	Received  time.Time      `json:"received"`
+	ID        int64           `json:"id"`
+	Name      string          `json:"name"`
+	Arguments map[string]any  `json:"arguments"`
+	Target    string          `json:"target,omitempty"`
+	Blocked   bool            `json:"blocked"`
+	Reason    string          `json:"reason,omitempty"`
+	Layers    map[string]bool `json:"layers,omitempty"`
+	Received  time.Time       `json:"received"`
 }
 
 // Exchange is one wire request and its response.
@@ -124,6 +133,10 @@ type Finding struct {
 	Rule   string `json:"rule"` // forbidden_tool | argument_limit | response_marker(hint)
 	Detail string `json:"detail"`
 	Hint   bool   `json:"hint"` // true when it cannot count as a hit
+	// Blocked marks a finding about a call the target refused. Such a call
+	// is an attempt, never an executed hit.
+	Blocked bool   `json:"blocked,omitempty"`
+	Reason  string `json:"reason,omitempty"`
 }
 
 // Trial is one send in one arm.
@@ -137,7 +150,9 @@ type Trial struct {
 	Sink      []SinkEvent `json:"sink"`
 	Findings  []Finding   `json:"findings"`
 	Delivered *bool       `json:"delivered,omitempty"` // perceived contains canary; nil if unknown
-	Hit       bool        `json:"hit"`
+	Hit       bool        `json:"hit"`                 // a forbidden call executed
+	Attempted bool        `json:"attempted"`           // a forbidden call was made, executed or refused
+	Variant   int         `json:"variant"`             // index of the payload variant this trial used
 }
 
 // ArmStats summarises one arm.
@@ -145,7 +160,8 @@ type ArmStats struct {
 	Trials    int     `json:"trials"`
 	Reached   int     `json:"reached"`
 	Delivered int     `json:"delivered"`
-	Hits      int     `json:"hits"`
+	Attempted int     `json:"attempted"` // trials with a forbidden call, executed or refused
+	Hits      int     `json:"hits"`      // trials with an executed forbidden call
 	Rate      float64 `json:"rate"`
 	Lower     float64 `json:"lower"`
 	Upper     float64 `json:"upper"`
@@ -160,18 +176,22 @@ type Verdict struct {
 
 // Run is one Repeater send or one Intruder case.
 type Run struct {
-	ID         string    `json:"id"`
-	Mode       string    `json:"mode"` // repeater | intruder
-	CampaignID string    `json:"campaign_id,omitempty"`
-	TargetID   string    `json:"target_id"`
-	TargetName string    `json:"target_name"`
-	Channel    Channel   `json:"channel"`
-	Payload    string    `json:"payload"` // template with {{canary}}
-	Control    string    `json:"control"`
-	Repeats    int       `json:"repeats"`
-	Trials     []Trial   `json:"trials"`
-	Verdict    Verdict   `json:"verdict"`
-	StartedAt  time.Time `json:"started_at"`
-	DurationMs int       `json:"duration_ms"`
-	Error      string    `json:"error,omitempty"`
+	ID         string  `json:"id"`
+	Mode       string  `json:"mode"` // repeater | intruder
+	CampaignID string  `json:"campaign_id,omitempty"`
+	TargetID   string  `json:"target_id"`
+	TargetName string  `json:"target_name"`
+	Channel    Channel `json:"channel"`
+	Payload    string  `json:"payload"` // template with {{canary}}
+	Control    string  `json:"control"`
+	Repeats    int     `json:"repeats"`
+	// TargetInfo is the target's /health answer at run start (policy, layers,
+	// temperature, model) when it could be read.
+	TargetInfo map[string]any `json:"target_info,omitempty"`
+	Variants   int            `json:"variants,omitempty"`
+	Trials     []Trial        `json:"trials"`
+	Verdict    Verdict        `json:"verdict"`
+	StartedAt  time.Time      `json:"started_at"`
+	DurationMs int            `json:"duration_ms"`
+	Error      string         `json:"error,omitempty"`
 }

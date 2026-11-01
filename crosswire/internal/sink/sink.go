@@ -85,7 +85,7 @@ func (s *Sink) Recent(n int) []model.SinkEvent {
 	return out
 }
 
-// Handler accepts POST {name, arguments, target}.
+// Handler accepts POST {name, arguments, target, blocked, reason, layers}.
 func (s *Sink) Handler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -93,15 +93,19 @@ func (s *Sink) Handler() http.HandlerFunc {
 			return
 		}
 		var body struct {
-			Name      string         `json:"name"`
-			Arguments map[string]any `json:"arguments"`
-			Target    string         `json:"target"`
+			Name      string          `json:"name"`
+			Arguments map[string]any  `json:"arguments"`
+			Target    string          `json:"target"`
+			Blocked   bool            `json:"blocked"`
+			Reason    string          `json:"reason"`
+			Layers    map[string]bool `json:"layers"`
 		}
 		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64<<10)).Decode(&body); err != nil || body.Name == "" {
 			http.Error(w, "expected {name, arguments}", http.StatusBadRequest)
 			return
 		}
-		ev := s.Add(model.SinkEvent{Name: body.Name, Arguments: body.Arguments, Target: body.Target})
+		ev := s.Add(model.SinkEvent{Name: body.Name, Arguments: body.Arguments, Target: body.Target,
+			Blocked: body.Blocked, Reason: body.Reason, Layers: body.Layers})
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{"id": ev.ID})
 	}

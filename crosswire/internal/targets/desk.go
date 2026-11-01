@@ -47,7 +47,7 @@ func deskTools(s *Server) []agent.Tool {
 			map[string]any{"ticket": str("ticket id"), "account": str("customer account"), "amount": map[string]any{"type": "number"}},
 			[]string{"ticket", "account", "amount"}, true,
 			func(a map[string]any) (string, error) {
-				if s.Policy == agent.Hardened && strings.ToUpper(strings.TrimSpace(argStr(a, "account"))) != deskCustomerAccount {
+				if s.interlockOn() && strings.ToUpper(strings.TrimSpace(argStr(a, "account"))) != deskCustomerAccount {
 					return "", errors.New("account differs from the customer on the ticket")
 				}
 				return "refund issued to " + argStr(a, "account"), nil
@@ -104,7 +104,14 @@ func perceiveDesk(ctx context.Context, s *Server, r perceiveReq) (string, *agent
 // makes the agent read its notes.
 func chatDesk(ctx context.Context, s *Server, msg string) (*agent.Result, error) {
 	notes := deskNotes(sessionOf(ctx))
-	if s.Policy == agent.Hardened {
+	if len(notes) > 0 {
+		// The notes are the perceived content here; they reach the model on
+		// the trigger, so the perception guardrail runs on them now.
+		if res, err := s.guardPerceived(ctx, renderNotes(notes)); res != nil || err != nil {
+			return res, err
+		}
+	}
+	if s.quarantineOn() {
 		var parsed []string
 		for _, n := range notes {
 			obj, err := s.quarantine(ctx,
