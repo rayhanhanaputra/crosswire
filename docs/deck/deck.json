@@ -10,35 +10,55 @@
     "cover",
     "claim",
     "paths",
+    "takeaways",
     "prior",
     "method",
+    "trial",
+    "echo",
+    "arms",
+    "verdicts",
     "targets",
     "artifacts",
     "results",
+    "row",
+    "phone",
     "control",
+    "control2",
+    "delivery",
+    "wording",
+    "capacity",
     "defenses",
     "hardened",
-    "honest",
+    "desk",
+    "interlock",
+    "change",
     "tool",
+    "demo",
+    "bundle",
     "limits",
+    "recipe",
     "close"
   ],
   "sections": {
     "s1": {
-      "description": "The claim: the classifier and the agent read different things.",
+      "description": "The claim and what you will take home.",
       "start": "cover"
     },
     "s2": {
-      "description": "How it was measured.",
+      "description": "How a hit is counted.",
       "start": "method"
     },
     "s3": {
-      "description": "What the numbers showed.",
+      "description": "What the numbers showed, and what the control arm caught.",
       "start": "results"
     },
     "s4": {
-      "description": "Defenses, one at a time, and the tool.",
+      "description": "Defenses, one layer at a time.",
       "start": "defenses"
+    },
+    "s5": {
+      "description": "The tool, the demo, the ask.",
+      "start": "tool"
     }
   },
   "faces": {

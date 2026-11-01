@@ -1,0 +1,11 @@
+<section id="phone" data-transition="fade" style="background:#F1F2EE;color:#1B2420;font-family:'Schibsted Grotesk', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
+<h2 style="font-size:72px;font-weight:700;line-height:1.05;letter-spacing:-1px">The Same Words, Down a Phone Line</h2>
+<table style="font-size:34px;color:#1B2420">
+<tr><th style="width:40%;text-align:left;font-weight:500;color:#6B7069">hits of 30</th><th style="width:30%;text-align:left;font-weight:500;color:#6B7069">speech file over HTTP</th><th style="width:30%;text-align:left;font-weight:500;color:#6B7069">SIP phone call</th></tr>
+<tr><td>no classifier</td><td style="color:#C8451F">25</td><td style="color:#C8451F">25</td></tr>
+<tr><td>classifier on the chat path</td><td style="color:#C8451F">21</td><td style="color:#C8451F">22</td></tr>
+<tr><td>classifier on the perception path</td><td style="color:#3A5F7D">3</td><td style="color:#3A5F7D">4</td></tr>
+</table>
+<p style="font-size:34px;line-height:1.4;color:#3A4039;width:1600px">The call adds G.711 audio, a real RTP stream and the agent's own recording and silence detection. None of it changed the rate. Over the phone the sink is the only evidence there is.</p>
+<aside>The phone call matters because that is how voice agents are reached in the world. The connector is UDP on loopback against our own target; no product was called.</aside>
+</section>
