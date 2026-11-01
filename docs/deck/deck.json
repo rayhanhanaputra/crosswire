@@ -19,7 +19,9 @@
     "verdicts",
     "targets",
     "artifacts",
+    "simlab",
     "results",
+    "cost",
     "row",
     "phone",
     "control",
@@ -31,6 +33,8 @@
     "hardened",
     "desk",
     "interlock",
+    "theory",
+    "tests",
     "change",
     "tool",
     "demo",
@@ -45,15 +49,15 @@
       "start": "cover"
     },
     "s2": {
-      "description": "How a hit is counted.",
+      "description": "How a hit is counted, and the testbeds.",
       "start": "method"
     },
     "s3": {
-      "description": "What the numbers showed, and what the control arm caught.",
+      "description": "What the numbers showed, what they cost, and what the control arm caught.",
       "start": "results"
     },
     "s4": {
-      "description": "Defenses, one layer at a time.",
+      "description": "Defenses by path and by provenance; the theory and its tests.",
       "start": "defenses"
     },
     "s5": {

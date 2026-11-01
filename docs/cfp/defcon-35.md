@@ -52,6 +52,10 @@ show the channel that does not work.
 
 Crosswire, the single-binary workbench behind every number, ships with the talk.
 
+**Testbeds.** Two. The six reference agents in the binary, each a real tool-calling model, produce every measured number. The companion SimLab (github.com/rayhanhanaputra/AIAgentsAllTheThings-SimLab) is a visual testbed: six deterministic digital twins (smart farm, water plant, warehouse fleet, hospital climate, smart building, command drill) that accept the same payloads, show the compromised state under a basic profile and keep content as data under a validated one, and report every control change to the Crosswire sink with the trial's nonce and session. It is a stage prop for the demo and an end-to-end check of the sink contract, not a measurement target, and the submission says so.
+
+**Claims, corrected after review (1 November 2026).** The chat-path column of the placement table equals the no-classifier column by construction, so it is not reported as a result. The perception-path classifier's benefit comes with a cost the first draft hid: it blocked benign inputs at 25/30 (home), 22/30 (voice) and 26/30 (expense) against 0/30 on camera and 5/30 on the PDF. On the handoff-note scenario, the withhold and confirmation layers key on the request path and the trigger arrives on the chat path, so they never see the note; the only layer that held keys on the value (0/30 with it, 20/30 without). The submission is framed on that distinction: defenses keyed to the request path fail on stored content, defenses keyed to argument provenance hold. Three tests of that claim (a two-phase inbox against a provenance build with a utility arm, classifier cost with defenses at temperature 0, and 25 generated paraphrases at each gate) are running; the numbers quoted below are replaced by the results page before submission.
+
 ## Detailed outline (for reviewers)
 
 1. **Setup (4 min).** Indirect prompt injection is Greshake's (2023). Calendar

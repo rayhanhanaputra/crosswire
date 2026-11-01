@@ -62,6 +62,10 @@ path, or `hardened` with any layer disabled. Every run exports a bundle: run JSO
 artifacts, sink events, hashes. The driver script that produced every number in the
 results pages is in the repository.
 
+**Testbeds.** Two. The six reference agents in the binary, each a real tool-calling model, produce every measured number. The companion SimLab (github.com/rayhanhanaputra/AIAgentsAllTheThings-SimLab) is a visual testbed: six deterministic digital twins (smart farm, water plant, warehouse fleet, hospital climate, smart building, command drill) that accept the same payloads, show the compromised state under a basic profile and keep content as data under a validated one, and report every control change to the Crosswire sink with the trial's nonce and session. It is a stage prop for the demo and an end-to-end check of the sink contract, not a measurement target, and the submission says so.
+
+**Claims, corrected after review (1 November 2026).** The chat-path column of the placement table equals the no-classifier column by construction, so it is not reported as a result. The perception-path classifier's benefit comes with a cost the first draft hid: it blocked benign inputs at 25/30 (home), 22/30 (voice) and 26/30 (expense) against 0/30 on camera and 5/30 on the PDF. On the handoff-note scenario, the withhold and confirmation layers key on the request path and the trigger arrives on the chat path, so they never see the note; the only layer that held keys on the value (0/30 with it, 20/30 without). The submission is framed on that distinction: defenses keyed to the request path fail on stored content, defenses keyed to argument provenance hold. Three tests of that claim (a two-phase inbox against a provenance build with a utility arm, classifier cost with defenses at temperature 0, and 25 generated paraphrases at each gate) are running; the numbers quoted below are replaced by the results page before submission.
+
 **What it does not do.** The sink needs the target to report its own tool calls, so a
 black-box product can only be tested where its tools can be pointed at a URL the tester
 controls, which is how most voice-agent platforms define custom tools. The SIP connector
@@ -78,6 +82,7 @@ lab endpoint, not a product. The reference targets were written for this project
    confirmation gate blocked, next to the executed count.
 5. Show the first camera pass that the control arm invalidated, and the corrected rule.
 6. Place a SIP call to the voice target from the same screen and show the recorded reply.
+7. Send the same payload into SimLab: the smart-farm valve opens under the basic profile, stays closed under validated, and both land in the sink.
 
 **Reference results (2026-11-01, `gpt-4o-mini`, temperature 0.7, 30 trials per arm,
 five paraphrases, full rows in `crosswire/docs/results/2026-11-01.md`):** with the

@@ -1,0 +1,50 @@
+{
+  "v": 4,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-31T09:10:00Z"
+  },
+  "lists": "css",
+  "title": "Crosswire: submission preview",
+  "order": [
+    "cover",
+    "claim",
+    "paths",
+    "method",
+    "trial",
+    "targets",
+    "simlab",
+    "results",
+    "cost",
+    "control",
+    "hardened",
+    "desk",
+    "interlock",
+    "theory",
+    "tests",
+    "tool",
+    "limits",
+    "close"
+  ],
+  "sections": {
+    "s1": {
+      "description": "Claim and method.",
+      "start": "cover"
+    },
+    "s2": {
+      "description": "Results, cost, and what held.",
+      "start": "results"
+    },
+    "s3": {
+      "description": "Theory, tool, limits.",
+      "start": "theory"
+    }
+  },
+  "faces": {
+    "schibsted-grotesk": {
+      "family": "Schibsted Grotesk",
+      "href": "https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700&display=swap"
+    }
+  },
+  "designSystems": []
+}

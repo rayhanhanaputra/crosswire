@@ -1,0 +1,25 @@
+<section id="paths" data-transition="fade" style="background:#F1F2EE;color:#1B2420;font-family:'Schibsted Grotesk', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:16px">
+<h2 style="font-size:72px;font-weight:700;line-height:1.05;letter-spacing:-1px">Two Paths</h2>
+<p style="font-size:30px;line-height:1.4;color:#3A4039;width:1500px">Only the chat path passes the guardrail. The agent reads all three.</p>
+<div style="position:relative;width:1664px;height:640px">
+<div style="position:absolute;left:0;top:0;width:320px;height:120px;border:2px solid #1B2420;display:flex;flex-direction:column;justify-content:center;padding:0 24px;gap:2px"><p style="font-size:30px;font-weight:700">Chat</p><p style="font-size:24px;color:#3A4039">typed by the user</p></div>
+<div style="position:absolute;left:448px;top:0;width:320px;height:120px;border:3px solid #3A5F7D;display:flex;flex-direction:column;justify-content:center;padding:0 24px;gap:2px"><p style="font-size:30px;font-weight:700;color:#3A5F7D">Guardrail</p><p style="font-size:24px;color:#3A4039">classifier on the message</p></div>
+<div style="position:absolute;left:896px;top:0;width:320px;height:640px;background:#1B2420;color:#F1F2EE;display:flex;flex-direction:column;justify-content:center;padding:0 24px;gap:2px"><p style="font-size:30px;font-weight:700">Agent</p><p style="font-size:24px;color:#B9BFB6">one model, every tool offered</p></div>
+<div style="position:absolute;left:1344px;top:260px;width:320px;height:120px;background:#C8451F;color:#F1F2EE;display:flex;flex-direction:column;justify-content:center;padding:0 24px;gap:2px"><p style="font-size:30px;font-weight:700">Tools</p><p style="font-size:24px">unlock, send, disarm, pay</p></div>
+<div style="position:absolute;left:0;top:260px;width:320px;height:120px;border:2px solid #1B2420;display:flex;flex-direction:column;justify-content:center;padding:0 24px;gap:2px"><p style="font-size:30px;font-weight:700">Device name</p><p style="font-size:24px;color:#3A4039">set by whoever owns the device</p></div>
+<div style="position:absolute;left:448px;top:260px;width:320px;height:120px;border:2px solid #1B2420;display:flex;flex-direction:column;justify-content:center;padding:0 24px;gap:2px"><p style="font-size:30px;font-weight:700">Entity list</p><p style="font-size:24px;color:#3A4039">pasted into the prompt</p></div>
+<div style="position:absolute;left:0;top:520px;width:320px;height:120px;border:2px solid #1B2420;display:flex;flex-direction:column;justify-content:center;padding:0 24px;gap:2px"><p style="font-size:30px;font-weight:700">Mic, camera</p><p style="font-size:24px;color:#3A4039">anyone in range</p></div>
+<div style="position:absolute;left:448px;top:520px;width:320px;height:120px;border:2px solid #1B2420;display:flex;flex-direction:column;justify-content:center;padding:0 24px;gap:2px"><p style="font-size:30px;font-weight:700">Perception</p><p style="font-size:24px;color:#3A4039">transcript, frame summary</p></div>
+<x-connector x1="320" y1="60" x2="448" y2="60" style="color:#3A5F7D;border-width:3px"></x-connector>
+<x-connector x1="768" y1="60" x2="896" y2="60" style="color:#3A5F7D;border-width:3px"></x-connector>
+<x-connector x1="320" y1="320" x2="448" y2="320" style="color:#C8451F;border-width:3px"></x-connector>
+<x-connector x1="768" y1="320" x2="896" y2="320" style="color:#C8451F;border-width:3px"></x-connector>
+<x-connector x1="320" y1="580" x2="448" y2="580" style="color:#C8451F;border-width:3px"></x-connector>
+<x-connector x1="768" y1="580" x2="896" y2="580" style="color:#C8451F;border-width:3px"></x-connector>
+<x-connector x1="1216" y1="320" x2="1344" y2="320" style="color:#1B2420;border-width:3px"></x-connector>
+<p style="position:absolute;left:448px;top:130px;width:320px;font-size:24px;color:#3A5F7D">inspected</p>
+<p style="position:absolute;left:448px;top:390px;width:320px;font-size:24px;color:#C8451F">never inspected</p>
+<p style="position:absolute;left:448px;top:478px;width:320px;font-size:24px;color:#C8451F">never inspected</p>
+</div>
+<aside>Read it left to right. Blue is the path the guardrail vendor drew: a message, a classifier, the model. Red is what the agent also reads, and nothing on those rows runs through the classifier, because the entity list and the transcript are assembled by the agent's own code after the guardrail has already said yes. The agent box is one model with every tool offered; that is the vulnerable reference build, and the hardened one at the end of the talk splits it.</aside>
+</section>
