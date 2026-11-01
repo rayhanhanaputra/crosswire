@@ -364,7 +364,7 @@ func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID s
 	if sendErr == nil {
 		time.Sleep(sinkGrace)
 	}
-	tr.Sink = e.Sink.Since(cursor, "")
+	tr.Sink = e.Sink.Since(cursor, "", canary)
 	tr.Findings = evidence.Match(t.Evidence, canary, judged, tr.Sink)
 	tr.Hit = evidence.IsHit(tr.Findings)
 	tr.Attempted = tr.Hit || evidence.IsAttempted(tr.Findings)

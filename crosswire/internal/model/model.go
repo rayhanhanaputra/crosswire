@@ -106,6 +106,7 @@ type SinkEvent struct {
 	Name      string          `json:"name"`
 	Arguments map[string]any  `json:"arguments"`
 	Target    string          `json:"target,omitempty"`
+	Session   string          `json:"session,omitempty"` // the request's session, so concurrent trials never share evidence
 	Blocked   bool            `json:"blocked"`
 	Reason    string          `json:"reason,omitempty"`
 	Layers    map[string]bool `json:"layers,omitempty"`

@@ -49,9 +49,10 @@ blocked them, so a defence that works in code is not mistaken for a model that r
 On the chat path the classifier removed typed injections (29/30 → 0/30) and changed
 nothing on the perception path (device name 28/30, speech 25/30, phone call 25/30,
 camera 30/30). On the perception path it did the reverse. The hardened build let no
-privileged call execute in 150 trials on one model; the ablation shows which layer
-caught the calls that got that far [and, on `deepseek-flash`, which removals let a
-call through: fill from the results page]. Our own control arm voided a run: a home
+privileged call execute in 210 trials; switching its layers off one at a time shows
+which one earned that. On the handoff-note scenario the note passed quarantine,
+withhold and confirmation in every build and a four-line interlock in the tool handler
+stopped every refund; with it off, 20 of 30 executed. Our own control arm voided a run: a home
 agent unlocked the door on a benign device name, once in thirty.
 
 We release Crosswire, the single-binary workbench used for every number here, with its

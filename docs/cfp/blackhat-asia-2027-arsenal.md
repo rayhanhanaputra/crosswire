@@ -86,13 +86,14 @@ while the same instruction through the device name, the phone call, the camera f
 and the invoice scored 30/30, 22/30, 30/30 and 3/30. With the same classifier on the
 perception path those became 0/30, 4/30, 0/30 and 0/30, and the typed arm went back to
 29–30/30. The SIP phone call reproduced the HTTP speech rate (25 vs 25 of 30). The
-hardened build executed no privileged call in 150 trials; with the withhold layer off
-the model attempted the call 6 (voice) and 1 (camera) times and the confirmation gate
-refused each, which the sink recorded. The home run was voided by its own control arm:
-one benign device name in thirty made the agent unlock the door. A quota error voided
-27 rows on this model; they are recorded as `error`, not as zeros. A second model
-(`deepseek-flash`) covers the inbox and desk scenarios and the full layer ablation:
-[fill the one-line summary from the results page before submitting].
+hardened build executed no privileged call in 210 trials across seven scenarios. With
+one layer off at a time: on six scenarios the few attempts (voice 6, phone 7, camera 1,
+all with withhold off) were refused by the confirmation gate and recorded by the sink;
+on the support-desk scenario the handoff note passed quarantine, withhold and
+confirmation in every build (13 to 30 attempts of 30) and the interlock in the tool
+handler refused all of them; with the interlock off, 20 of 30 refunds executed. The
+home run was voided by its own control arm (one benign device name in thirty unlocked
+the door) and stays in the record as invalid.
 
 **Open source:** Apache-2.0 (code), CC BY 4.0 (knowledge base). [public repository link:
 the repository must be reachable by reviewers before the deadline]

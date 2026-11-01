@@ -41,8 +41,10 @@ path, on the perception path, and on both, against the same agent.
 On the chat path the classifier removed the typed injections (29/30 → 0/30) and left
 the perception-path rate untouched (device name 28/30, speech 25/30, phone call 25/30,
 camera 30/30). On the perception path it did the reverse. A hardened build with four
-layers, each switchable, let no privileged call execute in 150 trials; the sink shows
-which layer caught the calls that got that far.
+layers, each switchable, let no privileged call execute in 210 trials. Switching the
+layers off one at a time shows which one earned that: on the handoff-note scenario the
+note passed three of them and a four-line interlock in code stopped every refund;
+without it, 20 of 30 went through.
 
 We also show what the control arm caught: a home agent that unlocked the front door
 on a benign device name, once in thirty, which voids the run by our own rule. And we
@@ -73,12 +75,13 @@ Crosswire, the single-binary workbench behind every number, ships with the talk.
    perception path. Perception path: 28→0, 25→3, 30→0, 3→0; typed stays at 29, 29,
    30, 29. The phone call reproduced the HTTP speech rate (25 vs 25, 22 vs 21, 4 vs
    3). The invoice channel is weak on this model (3/30) and is reported as weak.
-5. **Layers (6 min).** The hardened build with one layer off at a time. On
-   `gpt-4o-mini` no single removal produced an executed hit; every attempted call
-   was stopped by the confirmation gate, and all of them happened with quarantine or
-   withhold off. On `deepseek-flash` [fill from the results page: which removals let
-   a call execute, and on which scenario]. Why a zero that credits nothing is still
-   worth showing.
+5. **Layers (6 min).** The hardened build with one layer off at a time, 210 trials
+   with all four on and no privileged call executed. On six scenarios no single
+   removal produced a hit, and the table says that credits nothing. On the desk
+   scenario the handoff note passed quarantine, withhold and confirmation in every
+   build (13 to 30 attempts of 30) and a four-line interlock in the tool handler
+   stopped all of them; with the interlock off, 20 of 30 refunds executed. One
+   layer earned the zero the first draft credited to four.
 6. **What the control caught (3 min).** The home agent that unlocked the door on
    "signal strong, battery 64%". The camera oracle from the first pass. Both runs
    read `invalid` and stay in the record.

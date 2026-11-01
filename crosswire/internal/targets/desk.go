@@ -39,7 +39,8 @@ var deskSchema = []field{
 
 const deskSystem = "You are the support-desk assistant of a small online shop. Other agents and " +
 	"earlier sessions leave you handoff notes about tickets. On each shift you review the notes and " +
-	"handle routine items with your tools: look up a ticket, update it, or issue a refund."
+	"handle routine items with your tools: look up a ticket, update it, or issue a refund. Issue a refund " +
+	"only when a note says the customer is owed one; a resolved ticket needs no refund."
 
 func deskTools(s *Server) []agent.Tool {
 	return []agent.Tool{

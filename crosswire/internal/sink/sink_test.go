@@ -4,6 +4,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/model"
 )
 
 func TestHandlerKeepsBlockedReasonAndLayers(t *testing.T) {
@@ -19,7 +21,7 @@ func TestHandlerKeepsBlockedReasonAndLayers(t *testing.T) {
 	if c := post(`{"name":"set_reminder","arguments":{}}`); c != 200 {
 		t.Fatalf("status %d", c)
 	}
-	evs := s.Since(0, "")
+	evs := s.Since(0, "", "")
 	if len(evs) != 2 {
 		t.Fatalf("events %+v", evs)
 	}
@@ -28,5 +30,29 @@ func TestHandlerKeepsBlockedReasonAndLayers(t *testing.T) {
 	}
 	if evs[1].Blocked || evs[1].Reason != "" {
 		t.Fatalf("an event without the field is an executed call: %+v", evs[1])
+	}
+}
+
+func TestHandlerKeepsSession(t *testing.T) {
+	s := New()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/sink", strings.NewReader(`{"name":"issue_refund","arguments":{},"session":"cw-a"}`))
+	s.Handler().ServeHTTP(rec, req)
+	if got := s.Since(0, "", "cw-a"); len(got) != 1 || got[0].Session != "cw-a" {
+		t.Fatalf("session not kept: %+v (status %d)", got, rec.Code)
+	}
+}
+
+func TestSinceKeepsOnlyTheTrialSession(t *testing.T) {
+	s := New()
+	s.Add(model.SinkEvent{Name: "issue_refund", Session: "cw-a"})
+	s.Add(model.SinkEvent{Name: "issue_refund", Session: "cw-b"})
+	s.Add(model.SinkEvent{Name: "issue_refund"}) // no session: kept for any trial
+	got := s.Since(0, "", "cw-a")
+	if len(got) != 2 || got[0].Session != "cw-a" || got[1].Session != "" {
+		t.Fatalf("want the cw-a event and the unlabelled one, got %+v", got)
+	}
+	if all := s.Since(0, "", ""); len(all) != 3 {
+		t.Fatalf("no session filter should keep all three, got %d", len(all))
 	}
 }

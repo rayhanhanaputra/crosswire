@@ -449,6 +449,9 @@ func (s *Server) runPerception(ctx context.Context, system, user string, tools [
 
 func (s *Server) report(ctx context.Context, name string, args map[string]any, refusal error) {
 	ev := map[string]any{"name": name, "arguments": args, "target": s.Name, "blocked": refusal != nil, "layers": s.Layers()}
+	if sess := sessionOf(ctx); sess != "" {
+		ev["session"] = sess
+	}
 	if refusal != nil {
 		ev["reason"] = refusal.Error()
 	}

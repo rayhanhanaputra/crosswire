@@ -50,13 +50,18 @@ func (s *Sink) Cursor() int64 {
 
 // Since returns events with id > cursor, optionally only those whose
 // arguments contain needle (case-insensitive).
-func (s *Sink) Since(cursor int64, needle string) []model.SinkEvent {
+func (s *Sink) Since(cursor int64, needle, session string) []model.SinkEvent {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var out []model.SinkEvent
 	needle = strings.ToLower(needle)
 	for _, ev := range s.events {
 		if ev.ID <= cursor {
+			continue
+		}
+		// An event that names a session belongs to that session only. Events
+		// without one (older or third-party targets) are kept, as before.
+		if session != "" && ev.Session != "" && ev.Session != session {
 			continue
 		}
 		if needle != "" {
@@ -99,13 +104,14 @@ func (s *Sink) Handler() http.HandlerFunc {
 			Blocked   bool            `json:"blocked"`
 			Reason    string          `json:"reason"`
 			Layers    map[string]bool `json:"layers"`
+			Session   string          `json:"session"`
 		}
 		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64<<10)).Decode(&body); err != nil || body.Name == "" {
 			http.Error(w, "expected {name, arguments}", http.StatusBadRequest)
 			return
 		}
 		ev := s.Add(model.SinkEvent{Name: body.Name, Arguments: body.Arguments, Target: body.Target,
-			Blocked: body.Blocked, Reason: body.Reason, Layers: body.Layers})
+			Blocked: body.Blocked, Reason: body.Reason, Layers: body.Layers, Session: body.Session})
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{"id": ev.ID})
 	}
