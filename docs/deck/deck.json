@@ -11,37 +11,34 @@
     "claim",
     "paths",
     "prior",
-    "coverage",
     "method",
     "targets",
     "artifacts",
     "results",
-    "gap",
     "control",
+    "defenses",
     "hardened",
-    "delivery",
-    "capacity",
+    "honest",
     "tool",
     "limits",
-    "defenses",
     "close"
   ],
   "sections": {
     "s1": {
-      "description": "The claim: the guardrail and the agent read different representations.",
+      "description": "The claim: the classifier and the agent read different things.",
       "start": "cover"
     },
     "s2": {
-      "description": "How it was measured: three arms, canaries, a sink, intervals.",
+      "description": "How it was measured.",
       "start": "method"
     },
     "s3": {
-      "description": "What the numbers showed, including the oracle the control arm caught.",
+      "description": "What the numbers showed.",
       "start": "results"
     },
     "s4": {
-      "description": "The tool, its limits, and what defenders should change.",
-      "start": "tool"
+      "description": "Defenses, one at a time, and the tool.",
+      "start": "defenses"
     }
   },
   "faces": {
