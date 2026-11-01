@@ -1,0 +1,6 @@
+desk: kept 25 of 25 wanted, wrote /tmp/claude-1000/-home-user-Code-AIAgentsAllTheThings/8b668c11-ad00-4760-86a1-06fcc569c8df/scratchpad/run4/paraphrases.json
+usage: paraphrase.py [-h] --scenario
+                     {camera,desk,expense,home,inbox,inbox-pdf,voice} [--n N]
+                     [--out OUT] [--model MODEL] [--base-url BASE_URL]
+                     [--rounds ROUNDS]
+paraphrase.py: error: argument --scenario: invalid choice: 'inbox-pdf-2p' (choose from 'camera', 'desk', 'expense', 'home', 'inbox', 'inbox-pdf', 'voice')
