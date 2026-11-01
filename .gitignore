@@ -16,3 +16,4 @@ out/
 
 # Crosswire run artifacts
 crosswire/docs/results/target-logs/
+crosswire/docs/results/*/workbench-db/
