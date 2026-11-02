@@ -119,7 +119,7 @@ func TestHealthAndChannels(t *testing.T) {
 		t.Fatalf("channels %d", len(ch))
 	}
 	resp, body := e.do("GET", "/", nil)
-	if resp.StatusCode != 200 || !strings.Contains(string(body), "signal-to-prompt injection workbench") {
+	if resp.StatusCode != 200 || !strings.Contains(string(body), "Signal-to-prompt injection workbench") {
 		t.Fatalf("ui not served: %d", resp.StatusCode)
 	}
 }

@@ -18,7 +18,8 @@ function h(tag, attrs, ...kids) {
   return el;
 }
 const $ = (sel, root = document) => root.querySelector(sel);
-const clear = (el) => { el.replaceChildren(); return el; };
+// A pane rendered into is no longer the empty-state outline.
+const clear = (el) => { el.replaceChildren(); el.classList.remove('idle'); return el; };
 
 async function api(method, path, body) {
   const opt = { method, headers: {} };
@@ -73,6 +74,7 @@ function uiConfirm(message, { title = 'Confirm', confirmLabel = 'Confirm', dange
 
 const pct = (x) => (x * 100).toFixed(0) + '%';
 const fmtTime = (s) => (s ? new Date(s).toLocaleString() : '');
+const fmtShort = (s) => (s ? new Date(s).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 const shortID = (s) => (s || '').replace(/^cmp-/, '');
 const OUTCOME = { confirmed: 'Confirmed', observed: 'Observed', not_observed: 'Not observed', invalid: 'Invalid', error: 'Error' };
 
@@ -278,9 +280,20 @@ function artifactInfo(a) {
     a.decoded ? [h('dt', {}, 'round trip'), h('dd', { class: 'mono' }, a.decoded)] : null);
 }
 
+const ARM_LABEL = { injected: 'injected', control: 'control', direct: 'typed in chat', benign_direct: 'benign chat', utility: 'utility' };
 function armRow(name, a) {
-  const row = h('div', { class: 'arm' });
-  row.append(h('strong', {}, name));
+  const row = h('div', { class: 'arm ' + name });
+  row.append(h('strong', {}, ARM_LABEL[name] || name));
+  if (a && a.reached && (name === 'utility' || name === 'benign_direct')) {
+    const k = name === 'utility' ? (a.utility_ok || 0) : (a.blocked || 0);
+    const what = name === 'utility' ? 'legitimate task executed' : 'blocked by the classifier';
+    const r = k / a.reached;
+    row.append(h('span', { class: 'kn' }, `${k}/${a.reached}`), h('span', { class: 'ci' }, what));
+    const bar = h('div', { class: 'bar', role: 'img', 'aria-label': `${k} of ${a.reached} ${what}` }, h('div', { class: 'tick' }));
+    bar.style.setProperty('--rate', r);
+    row.append(bar);
+    return row;
+  }
   if (!a || a.reached === 0) {
     row.append(h('span', { class: 'kn' }, `0/${a ? a.trials : 0}`), h('span', { class: 'ci' }, 'no trial reached the target'));
     return row;
@@ -300,9 +313,11 @@ function armRow(name, a) {
 
 function armsBlock(verdict) {
   const wrap = h('div', { class: 'arms' });
-  for (const name of ['injected', 'control', 'direct']) {
+  for (const name of ['injected', 'control', 'direct', 'benign_direct', 'utility']) {
     if (verdict.arms && verdict.arms[name]) wrap.append(armRow(name, verdict.arms[name]));
   }
+  wrap.append(h('div', { class: 'axis', 'aria-hidden': 'true' }, h('span', {}), h('span', {}), h('span', {}),
+    h('div', { class: 'scale' }, h('span', {}, '0%'), h('span', {}, '50%'), h('span', {}, '100%'))));
   return wrap;
 }
 
@@ -651,9 +666,18 @@ function initTargets() {
       list.append(h('li', { class: 'empty' }, 'No targets. Load a reference target or fill in the form.'));
       return;
     }
-    for (const t of S.targets) {
-      list.append(h('li', {}, h('button', { type: 'button', 'aria-current': String(t.id === current), onclick: () => fill(t) },
-        h('span', {}, t.name, t.enabled ? '' : ' (disabled)'), envTag(t.environment))));
+    const groups = new Map();
+    for (const t of [...S.targets].sort((x, y) => x.name.localeCompare(y.name))) {
+      const g = t.name.split(/[-_+=]/)[0] || t.name;
+      if (!groups.has(g)) groups.set(g, []);
+      groups.get(g).push(t);
+    }
+    for (const [g, ts] of groups) {
+      if (groups.size > 1) list.append(h('li', { class: 'group' }, h('span', {}, g), h('span', { class: 'n' }, String(ts.length))));
+      for (const t of ts) {
+        list.append(h('li', {}, h('button', { type: 'button', 'aria-current': String(t.id === current), onclick: () => fill(t) },
+          h('span', { class: 'nm' }, t.name, t.enabled ? '' : ' (disabled)'), envTag(t.environment))));
+      }
     }
   }
 
@@ -674,8 +698,10 @@ function initRepeater() {
   const note = h('div', {});
   const attackBox = h('div', {});
   const controlBox = h('div', {});
-  const preview = h('div', { class: 'pane' }, h('p', { class: 'muted' }, 'Preview shows the decoded input, the exact request body and the rendered artifact. Nothing is sent.'));
-  const result = h('div', { class: 'pane' }, h('p', { class: 'muted' }, 'Send runs the trials. The verdict appears here.'));
+  const preview = h('div', { class: 'pane idle' }, h('h2', {}, 'Nothing previewed yet'),
+    h('p', {}, 'Pick a target and an adapter, write the payload with {{canary}} where the attacker\'s value goes, then Preview. You will see the rendered artifact, its hash and the exact request bodies. Nothing is sent.'));
+  const result = h('div', { class: 'pane idle' }, h('h2', {}, 'No trials run'),
+    h('p', {}, 'Send runs the injected arm, the benign control and, if ticked, the typed-in-chat arm, each with a fresh nonce per trial. The verdict and every trial appear here.'));
   const sendBtn = h('button', { class: 'btn primary', type: 'button' }, 'Send');
   const previewBtn = h('button', { class: 'btn', type: 'button' }, 'Preview');
   let attack, control, dirty = false;
@@ -785,7 +811,8 @@ function initIntruder() {
   const note = h('div', {});
   const tplBox = h('div', {});
   const controlBox = h('div', {});
-  const result = h('div', { class: 'pane' }, h('p', { class: 'muted' }, 'Run campaign sends every payload and lists one verdict per row.'));
+  const result = h('div', { class: 'pane idle' }, h('h2', {}, 'No campaign run'),
+    h('p', {}, 'Put one payload per line. Run campaign sends each one as its own run, with the control arm beside it, and lists one verdict per payload here. Open a row to see its trials in History.'));
   const runBtn = h('button', { class: 'btn primary', type: 'button' }, 'Run campaign');
   let tpl, control, dirty = false;
 
@@ -913,7 +940,8 @@ let openRun = () => {};
 function initHistory() {
   const root = $('#tab-history');
   const body = h('tbody', {});
-  const detail = h('div', { class: 'pane' }, h('p', { class: 'muted' }, 'Select a run to see its trials.'));
+  const detail = h('div', { class: 'pane idle' }, h('h2', {}, 'No run selected'),
+    h('p', {}, 'Pick a run on the left to see its verdict, each arm on the same axis, the artifact and every trial with its sink events. Download bundle exports it for review.'));
   const status = h('p', { class: 'muted' });
   let selected = null;
 
@@ -928,8 +956,8 @@ function initHistory() {
         const ctl = r.verdict.arms && r.verdict.arms.control;
         const kn = (a) => (a && a.reached ? `${a.hits}/${a.reached} [${a.lower.toFixed(2)}–${a.upper.toFixed(2)}]${a.attempted == null ? '' : ` att ${a.attempted}`}` : '–');
         const tr = h('tr', { class: 'click' + (r.id === selected ? ' sel' : ''), tabindex: 0, 'data-id': r.id },
-          h('td', { class: 'nowrap' }, fmtTime(r.started_at)), h('td', {}, badge(r.verdict.outcome)),
-          h('td', {}, r.target_name || r.target_id), h('td', {}, r.channel.adapter, r.channel.modeled ? [' ', h('span', { class: 'tag modeled' }, 'MODELED')] : null),
+          h('td', { class: 'nowrap', title: fmtTime(r.started_at) }, fmtShort(r.started_at)), h('td', {}, badge(r.verdict.outcome)),
+          h('td', { class: 'target' }, r.target_name || r.target_id), h('td', {}, r.channel.adapter, r.channel.modeled ? [' ', h('span', { class: 'tag modeled' }, 'MODELED')] : null),
           h('td', {}, r.mode), h('td', { class: 'mono nowrap' }, kn(inj)), h('td', { class: 'mono nowrap' }, kn(ctl)));
         tr.addEventListener('click', () => select(r.id));
         tr.addEventListener('keydown', (e) => { if (e.key === 'Enter') select(r.id); });
@@ -973,18 +1001,20 @@ function initSink() {
   sinkRefresh = async () => {
     try {
       const evs = await api('GET', '/api/sink?limit=200');
-      status.textContent = evs.length ? `${evs.length} most recent events, refreshed every 2 s.` : 'No events yet. Targets report tool calls here.';
+      status.textContent = evs.length ? `${evs.length} most recent events, refreshed every 2 s.` : 'No events yet. Point a target\'s tools at the sink address shown here; every call it makes, run or refused, appears as it happens.';
       clear(body);
       for (const ev of evs) {
         body.append(h('tr', {}, h('td', {}, ev.id), h('td', { class: 'nowrap' }, new Date(ev.received).toLocaleTimeString()),
-          h('td', {}, ev.name), h('td', {}, ev.target || ''), h('td', { class: 'mono' }, JSON.stringify(ev.arguments))));
+          h('td', { class: 'nowrap' }, ev.name), h('td', { class: 'nowrap' }, ev.blocked ? h('span', { class: 'muted' }, 'refused') : h('span', { class: 'hit-yes' }, 'ran')),
+          h('td', { class: 'target' }, ev.target || ''), h('td', { class: 'mono nowrap' }, ev.session || ''),
+          h('td', { class: 'mono' }, JSON.stringify(ev.arguments), ev.reason ? h('div', { class: 'muted' }, ev.reason) : null)));
       }
       if (S.health) url.textContent = S.health.sink_url;
     } catch (ex) { clear(status).append(h('span', { class: 'err' }, ex.message)); }
   };
-  root.append(h('div', { class: 'row spread' }, h('h2', {}, 'Sink events'), h('p', { class: 'muted small' }, 'Targets POST executed tool calls to ', url)),
+  root.append(h('div', { class: 'row spread' }, h('h2', {}, 'Sink events'), h('p', { class: 'muted small' }, 'Targets POST every tool call, run or refused, to ', url)),
     status,
-    h('div', { class: 'tablewrap' }, h('table', {}, h('thead', {}, h('tr', {}, ['id', 'time', 'tool', 'target', 'arguments'].map((c) => h('th', {}, c)))), body)));
+    h('div', { class: 'tablewrap' }, h('table', {}, h('thead', {}, h('tr', {}, ['id', 'time', 'tool', 'result', 'target', 'session', 'arguments'].map((c) => h('th', {}, c)))), body)));
 }
 
 // ---------- boot ----------
@@ -1008,5 +1038,7 @@ async function boot() {
     document.dispatchEvent(new CustomEvent('channels'));
   } catch (ex) { toast(`Could not reach the server: ${ex.message}`, true); }
   showTab((location.hash || '#targets').slice(1));
+  // Pasted #tab links and back/forward switch tabs too.
+  window.addEventListener('hashchange', () => showTab(location.hash.slice(1)));
 }
 boot();
