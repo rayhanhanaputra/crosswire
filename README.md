@@ -29,6 +29,22 @@ channel-capacity negative results, and a reusable tool.
 with an embedded web UI in the Burp Repeater/Intruder style, plus six reference
 targets that are real tool-calling LLM agents.
 
+<p align="center">
+  <img src="docs/assets/crosswire-history.webp" alt="Crosswire History tab: a confirmed run of the desk agent with the interlock off, 26 of 30 injected trials hit against 0 of 30 controls, with the per-trial table of arms, canaries, findings and sink events" width="100%">
+</p>
+<p align="center"><sub>A run's verdict: injected and control arms with Wilson intervals, attempted versus executed, utility and benign-chat arms, and every trial's sink events.</sub></p>
+
+<table>
+<tr>
+<td width="50%"><img src="docs/assets/crosswire-repeater.webp" alt="Crosswire Repeater tab previewing a sign artifact for the camera agent: the rendered PNG, its hash, and the exact perception and direct request bodies" width="100%"></td>
+<td width="50%"><img src="docs/assets/crosswire-targets.webp" alt="Crosswire Targets tab: the list of reference-target builds and the target editor with endpoints, transport, SIP settings, response paths and evidence rules" width="100%"></td>
+</tr>
+<tr>
+<td><sub>Repeater: the artifact the agent will perceive and the exact request bodies, before anything is sent.</sub></td>
+<td><sub>Targets: endpoints, HTTP or SIP transport, response paths and the evidence rules a hit must meet.</sub></td>
+</tr>
+</table>
+
 ```bash
 cd crosswire && go build ./cmd/crosswire
 ./crosswire serve                       # http://127.0.0.1:7117
@@ -57,10 +73,14 @@ What makes it more than a re-skin of the Python workbench below:
 
 See [`crosswire/docs/CONTRACT.md`](crosswire/docs/CONTRACT.md) for the wire contract
 and verdict rules, [`crosswire/README.md`](crosswire/README.md) for usage, and
-[`crosswire/docs/results/2026-10-31.md`](crosswire/docs/results/2026-10-31.md) for
-the first measured run (four scenarios × three configurations, N = 10 per arm).
-With a chat-path guardrail on, the same instruction scored 0/10 through chat and
-10/10, 9/10 and 10/10 through the device list, the microphone and the camera.
+[`crosswire/docs/results/2026-11-01-rev2.md`](crosswire/docs/results/2026-11-01-rev2.md)
+for the current results (one model, 30 trials per arm). In short: a prompt-injection
+classifier's cost depends on the channel, and on the chat path it blocks the user's
+own privileged requests; on channels where content is stored and acted on later, the
+layers keyed to the request path do nothing and only content-side checks hold; and at
+every model-side gate the outcome follows the wording, not the trial. The first pass
+([`2026-11-01.md`](crosswire/docs/results/2026-11-01.md)) is kept with its superseded
+claims marked. The paper draft is [`docs/paper/crosswire-paper.pdf`](docs/paper/crosswire-paper.pdf).
 
 | Reference target | Perceives            | Privileged tools                 | KB entry | Status |
 | ---------------- | -------------------- | -------------------------------- | -------- | ------ |
@@ -69,7 +89,7 @@ With a chat-path guardrail on, the same instruction scored 0/10 through chat and
 | `camera-agent`   | PNG → VLM (+ QR)     | `disarm_alarm`                   | AAT-0013 | reproduced, bundle in `kb/bundles/` |
 | `expense-agent`  | invoice PNG → VLM    | `approve_payment`                | AAT-0014 | documented (observed 2–3/10, not confirmed) |
 | `inbox-agent`    | PDF / ICS / EML → text | `forward_email`, `share_file`  | —        | measured 2026-10-31, see results |
-| `desk-agent`     | handoff note, stored then read | `issue_refund`         | —        | measured 2026-10-31, see results |
+| `desk-agent`     | handoff note, stored then read | `issue_refund`         | —        | measured 2026-11-01, see results |
 
 ## Legacy Python workbench
 

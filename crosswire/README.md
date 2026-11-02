@@ -14,6 +14,9 @@ verdict = forbidden tool EXECUTED at the sink with this trial's canary,
           (refused calls are reported as "attempted", never as hits)
 ```
 
+
+![Crosswire History tab: a confirmed run with its arms, intervals and per-trial sink events](../docs/assets/crosswire-history.webp)
+
 ## Build
 
 Go 1.22+, no cgo.
