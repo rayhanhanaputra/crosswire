@@ -16,12 +16,14 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/channel"
 	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/connector"
 	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/evidence"
 	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/model"
+	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/observer"
 	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/sink"
 	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/store"
 )
@@ -149,11 +151,8 @@ func (e *Engine) Validate(req Request) (model.Target, error) {
 			}
 		}
 	}
-	if t.Transport == "sip" {
-		enc, _ := e.Encoder.Encode(context.Background(), req.Adapter, channel.Substitute(req.Fields, "cw-preview"))
-		if enc.Artifact == nil || enc.Artifact.Kind != "audio/wav" {
-			return t, errors.New("a sip target takes audio only: use the speech or dtmf adapter")
-		}
+	if err := e.validateTransport(t, req); err != nil {
+		return t, err
 	}
 	payloadText := fmt.Sprint(req.Fields)
 	if bad := evidence.SelfMatching(t.Evidence, payloadText); len(bad) > 0 {
@@ -266,6 +265,8 @@ func (e *Engine) Run(ctx context.Context, req Request) (model.Run, error) {
 		return run, err
 	}
 	run.TargetName = t.Name
+	rc := &runCtx{obs: observer.New(t.Observer)}
+	defer rc.obs.Close()
 	run.TargetInfo = targetInfo(ctx, t)
 	// The name the target reports, not the store's label: sink events carry
 	// the former. Empty when /health could not be read, which turns the
@@ -285,7 +286,10 @@ func (e *Engine) Run(ctx context.Context, req Request) (model.Run, error) {
 	}
 	// Argument-limit rules and canary-free rules cannot be attributed to a
 	// trial when sends overlap, so those targets run one at a time.
-	if len(t.Evidence.ArgumentLimits) > 0 || (t.Evidence.RequireCanary != nil && !*t.Evidence.RequireCanary) || t.Environment == "production" {
+	// An observer reads one shared page or endpoint, and a bridge drives one
+	// device, so those runs are serial as well.
+	if len(t.Evidence.ArgumentLimits) > 0 || (t.Evidence.RequireCanary != nil && !*t.Evidence.RequireCanary) || t.Environment == "production" ||
+		rc.obs != nil || t.Transport == "bridge" {
 		conc = 1
 	}
 
@@ -318,7 +322,7 @@ func (e *Engine) Run(ctx context.Context, req Request) (model.Run, error) {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			tr := e.trial(ctx, t, req, run.ID, reported, j.index, j.arm)
+			tr := e.trial(ctx, t, req, run.ID, reported, j.index, j.arm, rc)
 			trials[slot] = tr
 			if e.OnTrial != nil {
 				e.OnTrial(run.ID, tr)
@@ -330,7 +334,7 @@ func (e *Engine) Run(ctx context.Context, req Request) (model.Run, error) {
 	if len(trials) > 0 && trials[0].Arm == "injected" {
 		run.Channel = e.channelSummary(req, run.ID, trials[0])
 	}
-	run.Verdict = evidence.Judge(t.Evidence, trials)
+	run.Verdict = evidence.JudgeWith(t.Evidence, rc.obs != nil, trials)
 	run.DurationMs = int(time.Since(run.StartedAt).Milliseconds())
 	if err := e.Store.PutRun(run); err != nil {
 		return run, fmt.Errorf("store run: %w", err)
@@ -338,9 +342,24 @@ func (e *Engine) Run(ctx context.Context, req Request) (model.Run, error) {
 	return run, nil
 }
 
-func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID, reported string, index int, arm string) model.Trial {
+// runCtx is the state one Run shares across its trials.
+type runCtx struct {
+	obs *observer.Observer
+	// halted is set when a bridge stop was not confirmed: nothing more is sent.
+	halted atomic.Bool
+}
+
+func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID, reported string, index int, arm string, rc *runCtx) (tr model.Trial) {
+	began := time.Now()
+	tl := &timeline{start: began}
 	canary := "cw-" + newHex(4)
-	tr := model.Trial{Index: index, Arm: arm, Canary: canary}
+	tr = model.Trial{Index: index, Arm: arm, Canary: canary}
+	defer func() { tr.Timeline = tl.sorted() }()
+	if rc.halted.Load() {
+		tr.Exchange.Error = "run halted: an earlier emergency stop was not confirmed"
+		tl.add("engine", "halted", tr.Exchange.Error)
+		return tr
+	}
 	fields, variant := pickFields(req.Fields, req.Variants, index)
 	if arm == "control" {
 		fields, variant = pickFields(req.ControlFields, req.ControlVariants, index)
@@ -384,17 +403,91 @@ func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID, 
 			enc.Artifact.Reference = key
 		}
 	}
+	tl.add("engine", "encoded", describeArtifact(req.Adapter, enc))
 
-	cursor := e.Sink.Cursor()
 	first := connector.Perception
 	if arm == "direct" || arm == "benign_direct" || (arm == "utility" && !utilPerception) {
 		first = connector.Direct
 	}
+	observed := rc.obs != nil && (arm == "injected" || arm == "control" || arm == "direct")
+	var before, after *model.Observation
+	reading := func(phase string) *model.Observation {
+		r, err := rc.obs.Read(ctx, phase)
+		r.Obs.AtMs = int(time.Since(began).Milliseconds())
+		if len(r.Screenshot) > 0 {
+			key := fmt.Sprintf("%s/%s/%d/observer-%s", runID, arm, index, phase)
+			if e.Store.PutArtifact(key, r.Screenshot) == nil {
+				r.Obs.ScreenshotRef = key
+			}
+		}
+		detail := trunc(observer.Normalize(r.Obs.Text), 100)
+		if err != nil {
+			detail = "failed: " + err.Error()
+		}
+		tl.add("observer", phase+" read", detail)
+		o := r.Obs
+		return &o
+	}
+	if observed {
+		if err := rc.obs.Reset(ctx); err != nil {
+			tr.Exchange.Error = err.Error()
+			tl.add("observer", "reset failed", err.Error())
+			return tr
+		}
+		if rc.obs.Enabled() && t.Observer.ResetURL != "" {
+			tl.add("observer", "reset", "state put back before the first read")
+		}
+		if before = reading("before"); before.Error != "" {
+			tr.Exchange.Error = "observer before read: " + before.Error
+			tr.Observer = &model.ObserverRecord{Before: before, Detail: "the first read failed, so nothing was sent"}
+			return tr
+		}
+	}
+
+	// Input mapper: rewrite the encoded message into the target's own schema.
+	// The mapped request is recorded as mapped and is never evidence.
+	var mappedIn *model.MappedInput
+	if e.mapsPath(t, first) {
+		mappedIn = e.mapInput(ctx, t, &enc.Input)
+		tr.Content = enc.Input.Content
+		tl.add("input mapper", "mapped", mapperDetail(mappedIn))
+		if mappedIn.Error != "" {
+			tr.Exchange.Error = mappedIn.Error
+			tr.Exchange.MappedInput = mappedIn
+			return tr
+		}
+		tr.MapperDropped = evidence.Carries(enc.Input.Content, canary) && !mappedIn.CarriesCanary
+	}
+
+	// On a bridge the stimulus stays on while the observer waits and reads, and
+	// the stop request follows. Elsewhere the second read follows the sink grace.
+	holdDone := false
+	if observed && t.Transport == "bridge" && first == connector.Perception {
+		enc.Input.AfterAction = func(hctx context.Context) error {
+			select {
+			case <-time.After(rc.obs.Wait()):
+			case <-hctx.Done():
+				return hctx.Err()
+			}
+			after = reading("after")
+			holdDone = true
+			return nil
+		}
+	}
+
+	cursor := e.Sink.Cursor()
+	tl.add("connector", "sent", describeSend(t, first))
+	sent := time.Now()
 	ex, sendErr := connector.Send(ctx, t, first, enc.Input)
 	if sendErr != nil && ex.Error == "" {
 		ex.Error = sendErr.Error()
 	}
+	if errors.Is(sendErr, connector.ErrStopNotConfirmed) {
+		rc.halted.Store(true)
+	}
 	ex.Request = redactMedia(ex.Request)
+	ex.MappedInput = mappedIn
+	e.recordBridge(tl, began, sent, ex)
 	if len(ex.ReplyAudio) > 0 {
 		key := fmt.Sprintf("%s/%s/%d/reply", runID, arm, index)
 		if err := e.Store.PutArtifact(key, ex.ReplyAudio); err == nil {
@@ -402,6 +495,8 @@ func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID, 
 		}
 		ex.ReplyAudio = nil
 	}
+	e.mapResponse(ctx, t, &ex, tl)
+	tl.add("connector", "response", describeReply(ex))
 	tr.Exchange = ex
 	// Two-phase trial: the artifact was stored; now the routine request
 	// that makes the agent read it. Findings are judged on the trigger's
@@ -423,12 +518,22 @@ func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID, 
 		second = connector.Trigger
 	}
 	if sendErr == nil && second != "" {
+		secondIn.AfterAction = nil
+		if e.mapsPath(t, second) {
+			if m := e.mapInput(ctx, t, &secondIn); m.Error != "" {
+				tr.Exchange.Error = m.Error
+				return tr
+			}
+		}
+		tl.add("connector", "trigger sent", describeSend(t, second))
 		tex, terr := connector.Send(ctx, t, second, secondIn)
 		if terr != nil && tex.Error == "" {
 			tex.Error = terr.Error()
 		}
 		tex.Request = redactMedia(tex.Request)
+		e.mapResponse(ctx, t, &tex, tl)
 		tr.Trigger = &tex
+		tl.add("connector", "trigger response", describeReply(tex))
 		if terr == nil {
 			judged = tex
 			if judged.Perceived == "" {
@@ -441,7 +546,21 @@ func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID, 
 	if sendErr == nil {
 		time.Sleep(sinkGrace)
 	}
+	if observed && !holdDone && sendErr == nil {
+		select {
+		case <-time.After(rc.obs.Wait()):
+		case <-ctx.Done():
+		}
+		after = reading("after")
+	}
 	tr.Sink = e.Sink.Since(cursor, "", canary, reported)
+	for _, ev := range tr.Sink {
+		verb := "executed"
+		if ev.Blocked {
+			verb = "refused"
+		}
+		tl.addAt(ev.Received, "sink", ev.Name+" "+verb, "")
+	}
 	tr.Guard = guardVerdict(ex.RawResponse, tr.Trigger)
 	switch arm {
 	case "benign_direct":
@@ -451,13 +570,24 @@ func (e *Engine) trial(ctx context.Context, t model.Target, req Request, runID, 
 		tr.Utility = &ok
 	default:
 		tr.Findings = evidence.Match(t.Evidence, canary, judged, tr.Sink)
+		if observed && before != nil {
+			rec := observer.Compare(before, after, canary)
+			tr.Observer = &rec
+			tr.ObserverChanged = rec.Changed
+			if after == nil || after.Error != "" {
+				tr.Findings = append(tr.Findings, model.Finding{Rule: "observer_unavailable", Hint: true, Detail: "the second observer read failed, so the observed state could not be judged"})
+			}
+			tr.Findings = append(tr.Findings, observer.Findings(t.Observer, rec)...)
+		}
 		tr.Hit = evidence.IsHit(tr.Findings)
 		tr.Attempted = tr.Hit || evidence.IsAttempted(tr.Findings)
+		tr.Weak = tr.Hit && evidence.OnlyUnattributed(tr.Findings)
 	}
 	if judged.Perceived != "" && evidence.Carries(tr.Content, canary) {
 		d := evidence.Carries(judged.Perceived, canary)
 		tr.Delivered = &d
 	}
+	tl.add("engine", "judged", fmt.Sprintf("hit %v, attempted %v", tr.Hit, tr.Attempted))
 	return tr
 }
 

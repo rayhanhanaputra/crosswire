@@ -108,14 +108,14 @@ func (e *env) json(method, path string, body any, want int, out any) {
 
 func TestHealthAndChannels(t *testing.T) {
 	e := setup(t)
-	var h map[string]string
+	var h map[string]any
 	e.json("GET", "/api/health", nil, 200, &h)
-	if h["status"] != "ok" || h["version"] != "test" || !strings.HasSuffix(h["sink_url"], "/api/sink") {
+	if h["status"] != "ok" || h["version"] != "test" || !strings.HasSuffix(h["sink_url"].(string), "/api/sink") || h["allow_remote"] != false {
 		t.Fatalf("health %v", h)
 	}
 	var ch []map[string]any
 	e.json("GET", "/api/channels", nil, 200, &ch)
-	if len(ch) != 12 {
+	if len(ch) != 23 {
 		t.Fatalf("channels %d", len(ch))
 	}
 	resp, body := e.do("GET", "/", nil)

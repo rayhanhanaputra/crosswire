@@ -43,25 +43,35 @@ type Info struct {
 	Modeled  bool     `json:"modeled"`
 	Fields   []string `json:"fields"`
 	Note     string   `json:"note"`
+	// Kinds says how the UI should edit each field: text (default), area,
+	// number, bool, json, audio (WAV upload or microphone) or select:a|b|c.
+	Kinds map[string]string `json:"kinds,omitempty"`
 }
 
 var catalogue = []Info{
-	{"text", "chat/text", "text", false, []string{"text"}, "Plain text. Used for the direct arm."},
-	{"qr", "camera/qr", "image/png", false, []string{"text", "size"}, "Real QR PNG, decoded back to verify."},
-	{"sign", "camera/sign", "image/png", false, []string{"text", "contrast", "scale"}, "Text rendered into an image; contrast below 0.2 is faint to people."},
-	{"invoice", "camera/document", "image/png", false, []string{"vendor", "number", "amount", "iban", "note", "note_contrast"}, "Rendered supplier invoice; the note field is the attacker's."},
-	{"speech", "microphone/speech", "audio/wav", false, []string{"text", "voice", "audio_base64"}, "Spoken payload (TTS) or an uploaded WAV."},
-	{"dtmf", "microphone/dtmf", "audio/wav", false, []string{"keys", "tone_ms", "gap_ms"}, "Capacity demo: 16 symbols, cannot carry language."},
-	{"morse-led", "light-sensor/morse", "pulses", false, []string{"text", "wpm"}, "Capacity demo: timing only; a 1 fps camera cannot read it."},
-	{"device-name", "ble/device-name", "text", true, []string{"name"}, "MODELED: the name is sent as text; no radio is used."},
-	{"handoff", "agent/handoff", "text", false, []string{"from_agent", "text"}, "A note from another agent or a prior session, stored by the target and read on a later request. Needs a trigger endpoint on the target."},
-	{"pdf", "inbox/pdf", "application/pdf", false, []string{"title", "body", "note", "note_gray"}, "Real one-page PDF; note_gray 1 is white ink, unseen by a reader, read by an extractor."},
-	{"calendar", "inbox/ics", "text/calendar", false, []string{"summary", "organizer", "location", "description"}, "Real iCalendar invite; every field is set by whoever sends it."},
-	{"email", "inbox/eml", "message/rfc822", false, []string{"from_name", "from", "reply_to", "subject", "body"}, "Real RFC 5322 message; display name and Reply-To are the sender's."},
+	{"text", "chat/text", "text", false, []string{"text"}, "Plain text. Used for the direct arm.", nil},
+	{"qr", "camera/qr", "image/png", false, []string{"text", "size"}, "Real QR PNG, decoded back to verify.", nil},
+	{"sign", "camera/sign", "image/png", false, []string{"text", "contrast", "scale"}, "Text rendered into an image; contrast below 0.2 is faint to people.", nil},
+	{"invoice", "camera/document", "image/png", false, []string{"vendor", "number", "amount", "iban", "note", "note_contrast"}, "Rendered supplier invoice; the note field is the attacker's.", nil},
+	{"speech", "microphone/speech", "audio/wav", false, []string{"text", "voice", "audio_base64"}, "Spoken payload (TTS) or an uploaded WAV.", nil},
+	{"dtmf", "microphone/dtmf", "audio/wav", false, []string{"keys", "tone_ms", "gap_ms"}, "Capacity demo: 16 symbols, cannot carry language.", nil},
+	{"morse-led", "light-sensor/morse", "pulses", false, []string{"text", "wpm"}, "Capacity demo: timing only; a 1 fps camera cannot read it.", nil},
+	{"device-name", "ble/device-name", "text", true, []string{"name"}, "MODELED: the name is sent as text; no radio is used.", nil},
+	{"handoff", "agent/handoff", "text", false, []string{"from_agent", "text"}, "A note from another agent or a prior session, stored by the target and read on a later request. Needs a trigger endpoint on the target.", nil},
+	{"pdf", "inbox/pdf", "application/pdf", false, []string{"title", "body", "note", "note_gray"}, "Real one-page PDF; note_gray 1 is white ink, unseen by a reader, read by an extractor.", nil},
+	{"calendar", "inbox/ics", "text/calendar", false, []string{"summary", "organizer", "location", "description"}, "Real iCalendar invite; every field is set by whoever sends it.", nil},
+	{"email", "inbox/eml", "message/rfc822", false, []string{"from_name", "from", "reply_to", "subject", "body"}, "Real RFC 5322 message; display name and Reply-To are the sender's.", nil},
 }
 
-// Catalogue lists the adapters.
-func Catalogue() []Info { return catalogue }
+// Catalogue lists the adapters, each with the editor kind of its fields.
+func Catalogue() []Info {
+	out := make([]Info, len(catalogue))
+	for i, c := range catalogue {
+		c.Kinds = fieldKinds[c.Name]
+		out[i] = c
+	}
+	return out
+}
 
 // Substitute replaces {{canary}} in every string field.
 func Substitute(fields map[string]any, canary string) map[string]any {
@@ -78,7 +88,19 @@ func Substitute(fields map[string]any, canary string) map[string]any {
 
 // Encode renders fields for the adapter. Canary substitution is the
 // caller's job (Substitute) so that controls can be built the same way.
+// Every artifact is also exposed to request templates as artifact_base64,
+// artifact_hex and artifact_type.
 func (e Encoder) Encode(ctx context.Context, adapter string, fields map[string]any) (Encoded, error) {
+	enc, err := e.encode(ctx, adapter, fields)
+	if err == nil && enc.Bytes != nil && enc.Artifact != nil && enc.Input.ArtifactBase64 == "" {
+		enc.Input.ArtifactBase64 = base64.StdEncoding.EncodeToString(enc.Bytes)
+		enc.Input.ArtifactHex = hex.EncodeToString(enc.Bytes)
+		enc.Input.ArtifactType = enc.Artifact.Kind
+	}
+	return enc, err
+}
+
+func (e Encoder) encode(ctx context.Context, adapter string, fields map[string]any) (Encoded, error) {
 	switch adapter {
 	case "text":
 		t := str(fields, "text")
@@ -176,7 +198,7 @@ func (e Encoder) Encode(ctx context.Context, adapter string, fields map[string]a
 		unit := signal.WPM(num(fields, "wpm", 12))
 		wav := signal.MorseWAV(pulses, unit, 700)
 		enc := Encoded{
-			Input: connector.Input{Source: "light-sensor/morse", Content: code},
+			Input: connector.Input{Source: "light-sensor/morse", Content: code, BlinkUnits: signal.BlinkUnitsJSON(pulses), UnitMs: unit},
 			Bytes: wav,
 			Artifact: &model.Artifact{
 				Kind:    "pulses",
@@ -252,7 +274,7 @@ func (e Encoder) Encode(ctx context.Context, adapter string, fields map[string]a
 			Artifact: &model.Artifact{Kind: "text", Bytes: len(n), SHA256: sum([]byte(n)), Summary: "modeled: sent as text"},
 		}, nil
 	}
-	return Encoded{}, fmt.Errorf("unknown adapter %q", adapter)
+	return e.encodeExtra(ctx, adapter, fields)
 }
 
 func image(source, content string, png []byte, summary, decoded string) Encoded {

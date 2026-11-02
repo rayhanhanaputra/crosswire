@@ -32,7 +32,22 @@ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o crosswire.exe   ./cmd/crossw
 ```bash
 ./crosswire serve                 # UI + API + sink on http://127.0.0.1:7117
 ./crosswire target home-agent     # reference target on :7201 (vulnerable)
+./crosswire bridge --simulate     # device bridge on 127.0.0.1:9910, drives nothing
+./crosswire selftest              # one trial set through every connector, offline
 ```
+
+| Command | What it does |
+| ------- | ------------ |
+| `serve [--listen ADDR] [--data DIR] [--allow-remote]` | the workbench: UI, API and sink. Listens on loopback unless `--allow-remote` |
+| `target NAME [flags]` | a reference agent (flags below) |
+| `bridge [--kind led\|gpio\|ble\|nfc] [--device-id ID] [--resource R] [--pin N] [--listen 127.0.0.1:9910] (--simulate \| --serial-port PORT \| --exec "HELPER ARGS")` | the HTTP device bridge a bridge target talks to |
+| `selftest [--repeats N]` | starts in-process fakes and runs one trial set through every connector; exits 1 if a row fails |
+| `version` | prints the version |
+
+Environment variables the workbench reads (never their values into the store or UI):
+`CROSSWIRE_CHROME` (browser for the browser observer), `CROSSWIRE_CHROME_NO_SANDBOX=1`
+(run that browser without its sandbox, for hosts that block it), and whatever names a
+target's `*_env` fields point at.
 
 Reference targets need an OpenAI-compatible model. They read
 `CROSSWIRE_LLM_API_KEY` (or `OPENAI_API_KEY`), `CROSSWIRE_LLM_BASE_URL`
@@ -243,9 +258,33 @@ does not expose them yet.
 | `calendar`    | ICS invite, read back      | yes     |
 | `email`       | EML message, read back     | yes     |
 | `handoff`     | text, stored by the target | yes     |
+| `json-fields` | JSON message, parsed back  | yes     |
+| `sensor-value` | JSON message              | modeled |
+| `reading-stream` | JSON message            | modeled |
+| `binary-toggle` | pulse timeline, decoded back (relay, GPIO, LED) | yes |
+| `ble-advert`  | BLE advertising data, decoded back | yes |
+| `nfc-tag`     | NDEF message, decoded back | yes     |
+| `ocr-text`    | PNG (text in an image)     | yes     |
+| `agent-note`  | JSON message               | modeled |
+| `retrieved-doc` | JSON chunk               | modeled |
+| `voice-transcript` | JSON message          | modeled |
+| `audio-upload` | WAV, uploaded or recorded | yes     |
 
 A modeled adapter is labelled in the UI and in the run, and cannot back a
-`reproduced` claim. The ESP32 path for `device-name` is planned.
+`reproduced` claim. `ble-advert` and `nfc-tag` build the real bytes; putting them on
+the air needs a bridge target and a radio or reader, which is untested here. The
+fields of each adapter and what it does not do are in CONTRACT.md section 5.
+
+### Microphone
+
+With the `speech` or `audio-upload` adapter, the Repeater's payload pane has a
+**Record** button. It captures the microphone in the browser (`getUserMedia` and Web
+Audio, 16-bit mono PCM at 16 kHz, at most 60 seconds), shows a player, and sends the
+clip as the audio artifact. Browsers allow the microphone only on `localhost`,
+`127.0.0.1` or HTTPS, so it works on a loopback server, and over `--allow-remote`
+only when the page is served over HTTPS. The UI says so. A recording is fixed audio:
+it cannot carry the per-trial nonce, so judge it by session (turn off "Require canary
+in tool arguments" on the target) and record a separate benign clip for the control.
 
 ## Two-phase trials: memory and other agents
 
@@ -289,22 +328,164 @@ section 7 lists the stored fields.
 
 ## Transports
 
-The perception path is HTTP by default: the artifact is posted to the target's
-endpoint. A target can instead set `transport: sip` with a `sip:user@host` endpoint.
-The speech or DTMF artifact is then played into a real call (G.711 μ-law over RTP,
-digest authentication if the endpoint asks, far-end audio recorded and kept with
-the trial, BYE at the end). Any SIP endpoint works: the agent's own SIP listener,
-a PBX extension, or a trunk that reaches a phone number. The chat path stays HTTP
-and the sink stays the evidence. The SIP connector is plain UDP in the binary; no
-library, no cgo.
+The perception path is HTTP by default. A target's **transport** changes how the
+artifact reaches the agent. Everything else (request templates, response paths,
+limits, evidence) is shared.
+
+| Transport  | Endpoint | Notes |
+| ---------- | -------- | ----- |
+| `http`     | `https://host/path` | POST, PUT or PATCH the JSON. Redirects are not followed. Also the "optical" and "voice HTTP" connectors of the Python workbench: use an image or audio adapter and `{{image_base64}}` or `{{audio_base64}}` in the template |
+| `ws`       | `wss://host/path` | one text message out, the first reply message in; optional subprotocol |
+| `tcp`      | `tcp://host:port` | line or 4-byte length framing, any terminator, read until terminator, close, idle or not at all; optional TLS; loopback and private networks only |
+| `mqtt`     | `mqtts://host:1883` | MQTT 3.1.1, QoS 0 or 1, TLS, username and password from environment variable names, the reply matched by the trial nonce or a JSON field |
+| `voice-ws` | `wss://host/voice` | the WAV streamed in chunks, reply events collected until a done marker, reply audio kept |
+| `sip`      | `sip:user@host`   | a real call: G.711 over RTP, digest authentication, far-end audio kept |
+| `bridge`   | `http://127.0.0.1:9910/action` | BLE, NFC, GPIO or LED through an HTTP bridge, with allowlists and a mandatory stop |
+
+The direct (chat) and trigger endpoints follow the scheme of their own URL, so a
+WebSocket agent can have an HTTP chat path or the same WebSocket for both. The
+details, limits and error rules of each transport are in CONTRACT.md section 1.1.
+
+### Phone calls and SIP
+
+The SIP connector is plain UDP in the binary; no library, no cgo. The speech or DTMF
+artifact is played into a real call (G.711 μ-law over RTP, digest authentication if
+the endpoint asks, far-end audio recorded and kept with the trial, BYE at the end).
+Any SIP endpoint works: the agent's own SIP listener, a PBX extension, or a trunk that
+reaches a phone number. The chat path stays HTTP and the sink stays the evidence.
+
+### Observers
+
+For an agent whose effect shows only in a UI or a state endpoint, set an **observer**
+on the target: an HTTP state endpoint, or a web page read in headless Chrome or
+Chromium (optional; there is a clear error when none is installed). The state is read
+before and after each trial, with a screenshot and the text of a CSS selector for the
+browser kind.
+
+An observer change is evidence under the same rules as the sink: it must carry the
+trial's nonce where the page can show one, it is checked on the control arm too, and a
+change on the control arm voids the run. When the target cannot show a nonce, the
+change still counts, but it is marked **weak**, and a run whose hits are all weak
+cannot be confirmed. A `reset URL` can put the state back before each trial.
+CONTRACT.md section 8 has the exact rules.
+
+### LLM mappers
+
+Two optional helpers, both OpenAI-compatible, at temperature 0, with the key read from
+a named environment variable. The **input mapper** rewrites the encoded message into
+the target's own request schema (`{{mapped}}` in the template). The **response
+mapper** reads reply text and actions out of an unstructured reply. Their output is
+labelled **MAPPED** in the UI and is never evidence: a hit still needs the sink or an
+observer change, and a forbidden action that only the mapper read is a hint. If the
+input mapper drops the canary from most requests, the run is invalid. See CONTRACT.md
+section 9.
+
+### Physical rigs: the device bridge
+
+A `bridge` target emits an allowlisted LED, GPIO, BLE or NFC stimulus and, with an
+observer, watches how the agent reacts. Before anything is sent Crosswire checks both
+allowlists, the duration and the step limits; after every action it sends a stop, and
+if a stop is not confirmed the run halts. The trial timeline shows the bridge
+acknowledgement, the stop confirmation and the observer reads. **Stop all** in the
+header (`POST /api/stop`) cancels every run in flight.
+
+```bash
+./crosswire bridge --simulate --kind led                              # try it, no hardware
+./crosswire bridge --kind led --serial-port /dev/ttyACM0 --pin 9      # the Arduino/ESP32 LED rig
+./crosswire bridge --kind ble --device-id hci0 --resource adv0 \
+  --exec "python3 ble_helper.py"                                      # BLE through your own helper
+```
+
+The serial backend drives the rig in [`hardware/arduino`](../hardware/arduino/README.md).
+BLE, NFC and GPIO go through a helper program you provide (`HELPER start` and
+`HELPER stop`, JSON on stdin and stdout; CONTRACT.md section 10.1), so the Crosswire
+binary needs no Bluetooth or NFC library. Only the simulated paths are tested here: a
+real LED rig, radio and NFC reader are not.
+
+### Safeguards
+
+Enforced on the server, whatever the UI does: loopback-only API, acknowledgement for
+every production and hardware run, one trial at a time for production, observer and
+bridge runs, TLS required off this machine for production targets, no connection to
+link-local (cloud metadata), reserved or unspecified addresses, raw TCP and MQTT on
+private networks only, no redirects, bounded requests, replies and timeouts, no
+credentials in URLs or plain headers, secrets as environment variable names only,
+device and resource allowlists with a mandatory stop. The full list is CONTRACT.md
+section 11.
+
+## Tests and selftest
+
+`go test ./...` runs every connector end to end against in-process fakes: a WebSocket
+agent, a TCP agent, an MQTT broker with an agent behind it, a realtime voice service,
+a device bridge, and a state page for the observers. No network and no hardware.
+Browser checks (the browser observer and the UI tests, including the microphone with
+Chrome's fake audio device) run when Chrome or Chromium is installed and skip
+otherwise.
+
+`./crosswire selftest` runs the same fakes from the binary, one trial set per
+connector, and prints a table:
+
+```text
+CONNECTOR                   CHANNEL       INJECTED  CONTROL  OUTCOME    RESULT
+http                        qr            5/5       0/5      confirmed  pass
+websocket                   json-fields   5/5       0/5      confirmed  pass
+tcp                         text          5/5       0/5      confirmed  pass
+mqtt 3.1.1                  sensor-value  5/5       0/5      confirmed  pass
+voice over websocket        audio-upload  5/5       0/5      confirmed  pass
+device bridge (led)         morse-led     5/5       0/5      confirmed  pass
+...
+```
+
+## Migrating from the Python workbench
+
+Crosswire does everything the Python workbench did, so the Python side can be retired.
+The table maps each feature. The Python code is left in place and unchanged.
+
+| Python workbench | Crosswire |
+| ---------------- | --------- |
+| Workbench tab | Repeater: Preview shows the artifact, its hash and the exact requests; Send runs repeats with a control arm |
+| Campaigns | Intruder (one payload marker, bounded concurrency, one verdict per payload) |
+| Targets, History | Targets, History (with a downloadable run bundle) |
+| `http`, `websocket`, `tcp`, `mqtt`, `voice-stream`, `device-bridge` connectors | transports `http`, `ws`, `tcp`, `mqtt`, `voice-ws`, `bridge` |
+| `voice` and `optical` connectors | `http` with `speech`/`dtmf`/`audio-upload` or an image adapter, and `{{audio_base64}}`/`{{image_base64}}`; `reply_audio_path` keeps reply audio |
+| `tcp_raw` | `tcp.send: raw` |
+| `mqtt_*` fields | `mqtt.*` (QoS, TLS by `mqtts://`, `username_env`, `password_env`, correlation by nonce) |
+| `voice_stream_*` fields | `voice_ws.*` |
+| `hardware_*` fields and `aat-arduino-bridge` | `bridge.*` and `crosswire bridge` |
+| HTTP and Playwright observers | `observer.kind: http` and `browser` (Chrome or Chromium through the DevTools protocol, no Playwright) |
+| `mapper_*` and `response_mapper_*` | `mapper` and `response_mapper` (output labelled and never evidence) |
+| `{{input}}`, `{{message_id}}` | `{{content}}`, `{{canary}}` |
+| `{{body}}`, `{{message}}` | not carried over; use `{{content}}`, `{{content_json}}` or `{{artifact_*}}` |
+| `prompt-text`, `json-field`, `sensor-value`, `reading-stream` | `text`, `json-fields`, `sensor-value`, `reading-stream` |
+| `binary-toggle`, `morse-blink` | `binary-toggle`, `morse-led` |
+| `voice-transcript` (and its audio attachment) | `voice-transcript` (modeled text), `speech`, `dtmf`, `audio-upload` |
+| `qr-code`, `text-in-image` | `qr`; `ocr-text` and `sign` |
+| `agent-note`, `retrieved-doc` | `agent-note`, `retrieved-doc` (modeled), `handoff` for a note stored and read later |
+| `ble-advert`, `nfc-tag` | `ble-advert` (AD structures), `nfc-tag` (NDEF) |
+| microphone capture | Record button in the Repeater |
+| "confirmed violation" from a marker or a tool name in the reply | removed: a hit is a forbidden tool at the sink with the trial's canary (or an observer change under the rules above); reply text is only a hint |
+| production acknowledgement, concurrency one, size and time limits, redirects refused, unsafe addresses refused, HTTPS off-host, hardware allowlists and stop | all enforced (CONTRACT.md section 11), plus a kill switch |
+| SQLite run store | bbolt; old Python runs are not imported |
+
+Not carried over: the `{{body}}` and `{{message}}` placeholders, the Python run
+database, and the Playwright dependency. Real BLE, NFC and GPIO hardware needs a helper
+program of your own (the protocol is documented); only the simulated paths are tested.
 
 ## Layout
 
 ```text
-cmd/crosswire        entry point: serve | target | version
-internal/signal      Morse, QR, DTMF, text-in-image, invoice, PDF/ICS/EML and G.711 codecs
+cmd/crosswire        entry point: serve | target | bridge | selftest | version
+internal/signal      Morse, QR, DTMF, text-in-image, invoice, PDF/ICS/EML, NDEF, BLE advertising, G.711 codecs
 internal/channel     adapters → artifact + input
-internal/connector   HTTP and SIP delivery, template rendering, response parsing
+internal/connector   HTTP, WebSocket, TCP, MQTT, voice-ws, SIP and bridge delivery, template rendering, response parsing
+internal/wsock       WebSocket client and server accept on the standard library
+internal/guard       address, URL, TLS and header rules every connection follows
+internal/observer    HTTP and browser observers, change and nonce rules
+internal/cdp         DevTools protocol client for an installed Chrome or Chromium
+internal/mapper      optional LLM input and response mappers
+internal/bridge      the HTTP device bridge (simulate, serial, exec helper)
+internal/fakes       in-process fakes for every connector
+internal/selftest    the selftest table
 internal/sink        out-of-band tool-execution receiver
 internal/evidence    rules, Wilson intervals, verdicts
 internal/engine      trials, arms, canaries
@@ -312,7 +493,7 @@ internal/store       bbolt persistence
 internal/server      API + embedded UI
 internal/targets     the six reference agents
 internal/agent       tool-calling loop with vulnerable / hardened policies
-internal/rig         serial driver for the Arduino LED rig
+internal/rig         serial driver for the Arduino LED rig (used by the bridge)
 tools/               promptguard_server.py: Llama Prompt Guard 2 behind --classifier-url
 docs/results         experiment.py (the driver), paraphrase.py (paraphrase generator)
 docs/CONTRACT.md     the wire contract and verdict rules

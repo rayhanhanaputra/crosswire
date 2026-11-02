@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -106,4 +107,42 @@ func writeOneShot(w http.ResponseWriter, name string, v any) {
 	data, _ := json.Marshal(v)
 	w.Header().Set("Content-Type", "text/event-stream")
 	fmt.Fprintf(w, "event: %s\ndata: %s\n\n", name, data)
+}
+
+// active tracks the cancel function of every run and campaign in flight, so
+// the kill switch can stop them all. Cancelling a run cancels its context; a
+// bridge exchange then still sends its stop request.
+type active struct {
+	mu   sync.Mutex
+	next int
+	m    map[int]context.CancelFunc
+}
+
+func newActive() *active { return &active{m: map[int]context.CancelFunc{}} }
+
+// begin derives a cancellable context from parent and registers it.
+func (a *active) begin(parent context.Context) (context.Context, func()) {
+	ctx, cancel := context.WithCancel(parent)
+	a.mu.Lock()
+	a.next++
+	id := a.next
+	a.m[id] = cancel
+	a.mu.Unlock()
+	return ctx, func() {
+		a.mu.Lock()
+		delete(a.m, id)
+		a.mu.Unlock()
+		cancel()
+	}
+}
+
+// cancelAll cancels everything in flight and returns how many were running.
+func (a *active) cancelAll() int {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	n := len(a.m)
+	for _, c := range a.m {
+		c()
+	}
+	return n
 }

@@ -5,13 +5,14 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/connector"
+	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/guard"
 	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/model"
 	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/store"
 )
@@ -117,6 +118,13 @@ func absoluteHTTP(raw string) bool {
 	return err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Host != ""
 }
 
+// pathEndpoint reports whether raw can be the endpoint of a direct or trigger
+// path: http, https, ws, wss or tcp, with no credentials or fragment.
+func pathEndpoint(raw string) bool {
+	_, err := guard.ParseURL(raw, "http", "https", "ws", "wss", "tcp")
+	return err == nil
+}
+
 // normalizeTarget validates a target in place and applies defaults.
 func normalizeTarget(t *model.Target) error {
 	t.Name = strings.TrimSpace(t.Name)
@@ -127,36 +135,16 @@ func normalizeTarget(t *model.Target) error {
 		return errors.New(`environment must be "staging" or "production"`)
 	}
 	t.Endpoint = strings.TrimSpace(t.Endpoint)
-	t.Transport = strings.ToLower(strings.TrimSpace(t.Transport))
-	switch t.Transport {
-	case "", "http":
-		t.Transport = ""
-		if !absoluteHTTP(t.Endpoint) {
-			return errors.New("endpoint must be an absolute http(s) URL")
-		}
-	case "sip":
-		if !strings.HasPrefix(t.Endpoint, "sip:") || !strings.Contains(t.Endpoint, "@") {
-			return errors.New("a sip target's endpoint must be a sip:user@host[:port] URI")
-		}
-		if t.SIP.PasswordEnv != "" && !envNameRe.MatchString(t.SIP.PasswordEnv) {
-			return errors.New("sip.password_env must be the NAME of an environment variable, not the password")
-		}
-		if t.SIP.LocalIP != "" && net.ParseIP(t.SIP.LocalIP) == nil {
-			return errors.New("sip.local_ip must be an IP address")
-		}
-		if t.SIP.ListenSeconds < 0 || t.SIP.ListenSeconds > 120 || t.SIP.RingSeconds < 0 || t.SIP.RingSeconds > 120 {
-			return errors.New("sip ring_seconds and listen_seconds must be between 0 and 120")
-		}
-	default:
-		return fmt.Errorf("transport %q is not supported; use http or sip", t.Transport)
+	if err := normalizeTransport(t); err != nil {
+		return err
 	}
 	t.DirectEndpoint = strings.TrimSpace(t.DirectEndpoint)
-	if t.DirectEndpoint != "" && !absoluteHTTP(t.DirectEndpoint) {
-		return errors.New("direct_endpoint must be an absolute http(s) URL")
+	if t.DirectEndpoint != "" && !pathEndpoint(t.DirectEndpoint) {
+		return errors.New("direct_endpoint must be an absolute http(s), ws(s) or tcp URL without credentials")
 	}
 	t.TriggerEndpoint = strings.TrimSpace(t.TriggerEndpoint)
-	if t.TriggerEndpoint != "" && !absoluteHTTP(t.TriggerEndpoint) {
-		return errors.New("trigger_endpoint must be an absolute http(s) URL")
+	if t.TriggerEndpoint != "" && !pathEndpoint(t.TriggerEndpoint) {
+		return errors.New("trigger_endpoint must be an absolute http(s), ws(s) or tcp URL without credentials")
 	}
 	t.Method = strings.ToUpper(strings.TrimSpace(t.Method))
 	if t.Method == "" {
@@ -173,10 +161,30 @@ func normalizeTarget(t *model.Target) error {
 	if t.TimeoutSeconds == 0 {
 		t.TimeoutSeconds = 30
 	}
+	if len(t.Headers) > 30 || len(t.SecretHeaders) > 10 {
+		return errors.New("use at most 30 static headers and 10 secret headers")
+	}
+	for header, value := range t.Headers {
+		if err := guard.CheckStaticHeader(header, value); err != nil {
+			return err
+		}
+	}
 	for header, env := range t.SecretHeaders {
+		if err := guard.CheckSecretHeaderName(header); err != nil {
+			return err
+		}
 		if !envNameRe.MatchString(env) {
 			return fmt.Errorf("secret_headers[%s] must be the NAME of an environment variable, not the secret itself", header)
 		}
+	}
+	if err := normalizeObserver(t); err != nil {
+		return err
+	}
+	if err := normalizeMappers(t); err != nil {
+		return err
+	}
+	if err := connector.CheckProduction(*t); err != nil {
+		return err
 	}
 	t.Evidence.ForbiddenTools = clean(t.Evidence.ForbiddenTools)
 	t.Evidence.ResponseMarkers = clean(t.Evidence.ResponseMarkers)

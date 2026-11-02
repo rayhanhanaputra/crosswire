@@ -45,13 +45,14 @@ type Server struct {
 	sink        *sink.Sink
 	enc         channel.Encoder
 	jobs        *jobs
+	active      *active
 }
 
 // New builds a server. base bounds background (async) runs.
 func New(base context.Context, st *store.Store, version, dataDir string, allowRemote bool) *Server {
 	return &Server{
 		version: version, dataDir: dataDir, allowRemote: allowRemote, base: base,
-		st: st, sink: sink.New(), enc: channel.Encoder{Speak: tts.Speak}, jobs: newJobs(),
+		st: st, sink: sink.New(), enc: channel.Encoder{Speak: tts.Speak}, jobs: newJobs(), active: newActive(),
 	}
 }
 
@@ -162,11 +163,14 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/runs/{id}/events", s.runEvents)
 	mux.HandleFunc("GET /api/runs/{id}/artifacts/{arm}/{index}", s.getArtifact)
 	mux.HandleFunc("GET /api/runs/{id}/artifacts/{arm}/{index}/reply", s.getReplyArtifact)
+	mux.HandleFunc("GET /api/runs/{id}/artifacts/{arm}/{index}/observer/{phase}", s.getObserverShot)
 	mux.HandleFunc("GET /api/runs/{id}/bundle", s.getBundle)
 
 	mux.HandleFunc("POST /api/intruder", s.createIntruder)
 	mux.HandleFunc("GET /api/intruder/{id}/events", s.intruderEvents)
 
+	mux.HandleFunc("POST /api/stop", s.handleStop)
+	mux.HandleFunc("GET /api/transports", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, Transports) })
 	mux.HandleFunc("POST /api/sink", s.sink.Handler())
 	mux.HandleFunc("GET /api/sink", s.listSink)
 
@@ -201,7 +205,9 @@ func (s *Server) guard(next http.Handler) http.Handler {
 		h := w.Header()
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("Referrer-Policy", "no-referrer")
-		h.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; media-src 'self' data:; frame-ancestors 'none'")
+		h.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: blob:; media-src 'self' data: blob:; frame-ancestors 'none'")
+		// The microphone is for the Repeater's recorder on this page only.
+		h.Set("Permissions-Policy", "microphone=(self), camera=(), geolocation=()")
 		if strings.HasPrefix(r.URL.Path, "/api/") {
 			h.Set("Cache-Control", "no-store")
 		}
@@ -211,7 +217,13 @@ func (s *Server) guard(next http.Handler) http.Handler {
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, 200, map[string]any{"status": "ok", "version": s.version, "sink_url": s.sinkURL, "data_dir": s.dataDir})
+	writeJSON(w, 200, map[string]any{"status": "ok", "version": s.version, "sink_url": s.sinkURL, "data_dir": s.dataDir, "allow_remote": s.allowRemote})
+}
+
+// handleStop is the kill switch: it cancels every run and campaign in flight.
+// A device bridge exchange still sends its stop request when its run is cancelled.
+func (s *Server) handleStop(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, 200, map[string]int{"cancelled": s.active.cancelAll()})
 }
 
 func (s *Server) listSink(w http.ResponseWriter, r *http.Request) {

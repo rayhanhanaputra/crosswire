@@ -70,6 +70,24 @@ What makes it more than a re-skin of the Python workbench below:
   the chat path only — where deployments put it.
 - **Run bundles.** Every run exports a zip (run.json, artifacts, sink events). A
   knowledge-base entry can only claim `reproduced` by pointing at one.
+- **Every connector and channel the Python workbench had.** HTTP, WebSocket, raw TCP
+  (line or length framing), MQTT 3.1.1 with TLS and credentials from environment
+  variable names, realtime voice over WebSocket, SIP, and a device bridge for BLE,
+  NFC, GPIO and LED rigs with allowlists and a mandatory stop. Eleven more input
+  channels: JSON fields, sensor values, reading streams, binary toggles, BLE
+  advertisements and NFC (NDEF) records as real bytes, OCR text as an image, agent
+  notes, retrieved documents, voice transcripts, and audio you upload or record
+  with the microphone button.
+- **Evidence beyond the sink, with the same discipline.** An observer (an HTTP state
+  endpoint, or a web page read in headless Chrome) turns a state change into
+  evidence only when it carries the trial's nonce, checks the control arm too, and
+  voids the run on a control change. Optional LLM mappers reshape the request and
+  read an unstructured reply, but their output is labelled and is never evidence.
+- **Safeguards enforced on the server.** Acknowledgement for production and hardware
+  runs, TLS off-host for production, no link-local or reserved destinations, bounded
+  requests, secrets as environment variable names only, and a stop-all switch.
+- **Tested without a network.** `go test ./...` and `crosswire selftest` run every
+  connector against in-process fakes, with no hardware.
 
 See [`crosswire/docs/CONTRACT.md`](crosswire/docs/CONTRACT.md) for the wire contract
 and verdict rules, [`crosswire/README.md`](crosswire/README.md) for usage, and
@@ -93,10 +111,14 @@ claims marked. The paper draft is [`docs/paper/crosswire-paper.pdf`](docs/paper/
 
 ## Legacy Python workbench
 
-The sections below describe the original Python/Next.js workbench. It still runs
-and its connector matrix is still useful for plain HTTP, MQTT, TCP and WebSocket
-targets, but its evidence model (single send, substring match) is superseded by
-Crosswire and it will not gain new channels.
+The sections below describe the original Python/Next.js workbench. Crosswire now
+does everything it did (connectors, channels, hardware rigs, the LLM mappers,
+observers, the production safeguards and local connector tests), with an evidence
+model it lacked (a canary, a control arm, executed versus attempted, session-keyed
+sink events). The Python workbench can be retired. It still runs and is unchanged,
+but it will not gain new channels. The table in
+[Migrating from the Python workbench](crosswire/README.md#migrating-from-the-python-workbench)
+maps each Python feature to its Crosswire equivalent.
 
 ## Web Workbench
 

@@ -1,6 +1,8 @@
 // Package connector delivers an encoded payload to a target and captures the
-// reply. Only HTTP is implemented; it is what every real agent gateway speaks
-// and what the reference targets expose.
+// reply. HTTP is what most agent gateways speak and what the reference
+// targets expose. WebSocket, raw TCP, MQTT, realtime voice over WebSocket,
+// SIP and the physical device bridge reuse the same Target model, request
+// templates, response paths and limits. docs/CONTRACT.md section 1 lists them.
 package connector
 
 import (
@@ -11,7 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -19,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/guard"
 	"github.com/rayhanhanaputra/AIAgentsAllTheThings/crosswire/internal/model"
 )
 
@@ -34,6 +36,24 @@ type Input struct {
 	FileBase64 string
 	FileType   string
 	Canary     string
+	// ArtifactBase64, ArtifactHex and ArtifactType carry the raw bytes of any
+	// artifact (NDEF, BLE advertising data, JSON message) and its media type.
+	ArtifactBase64 string
+	ArtifactHex    string
+	ArtifactType   string
+	// BlinkUnits is a raw JSON array of ["on"|"off", units] steps for the
+	// binary-toggle and Morse channels. UnitMs is the length of one unit.
+	BlinkUnits string
+	UnitMs     int
+	// Mapped is the input mapper's output for {{mapped}}; nil without a mapper.
+	Mapped map[string]any
+	// Extra holds further placeholders (device_id, resource and so on).
+	// Values are substituted as JSON-safe strings.
+	Extra map[string]string
+	// AfterAction, when set, runs on a bridge exchange after the bridge has
+	// acknowledged the action and before the stop request: the stimulus is
+	// still active, so this is where the engine waits and reads the observer.
+	AfterAction func(ctx context.Context) error
 }
 
 // Arm selects which of the target's two paths to use.
@@ -73,7 +93,20 @@ func render(tpl, def string, in Input) (map[string]any, error) {
 		enc, _ := json.Marshal(s)
 		return string(enc[1 : len(enc)-1])
 	}
-	r := strings.NewReplacer(
+	blink := in.BlinkUnits
+	if blink == "" {
+		blink = "[]"
+	}
+	unit := in.UnitMs
+	if unit <= 0 {
+		unit = 200
+	}
+	mapped := "null"
+	if in.Mapped != nil {
+		enc, _ := json.Marshal(in.Mapped)
+		mapped = string(enc)
+	}
+	pairs := []string{
 		"{{content}}", q(in.Content),
 		"{{content_json}}", jsonOrQuoted(in.Content),
 		"{{source}}", q(in.Source),
@@ -82,9 +115,18 @@ func render(tpl, def string, in Input) (map[string]any, error) {
 		"{{file_base64}}", in.FileBase64,
 		"{{file_type}}", q(in.FileType),
 		"{{canary}}", q(in.Canary),
-	)
+		"{{artifact_base64}}", in.ArtifactBase64,
+		"{{artifact_hex}}", in.ArtifactHex,
+		"{{artifact_type}}", q(in.ArtifactType),
+		"{{blink_units}}", blink,
+		"{{unit_ms}}", strconv.Itoa(unit),
+		"{{mapped}}", mapped,
+	}
+	for k, v := range in.Extra {
+		pairs = append(pairs, "{{"+k+"}}", q(v))
+	}
 	var body map[string]any
-	if err := json.Unmarshal([]byte(r.Replace(tpl)), &body); err != nil {
+	if err := json.Unmarshal([]byte(strings.NewReplacer(pairs...).Replace(tpl)), &body); err != nil {
 		return nil, fmt.Errorf("request template is not valid JSON after substitution: %w", err)
 	}
 	return body, nil
@@ -98,14 +140,13 @@ func jsonOrQuoted(s string) string {
 	return string(enc)
 }
 
-// Send performs one HTTP exchange on the chosen arm. It refuses redirects.
-// The loopback-only rule applies to Crosswire's own API, not to targets,
-// which the operator configured explicitly.
+// Send performs one exchange on the chosen arm. The perception arm follows
+// the target's Transport; the direct and trigger arms follow the scheme of
+// their own endpoint. HTTP refuses redirects. The loopback-only rule applies
+// to Crosswire's own API, not to targets, which the operator configured
+// explicitly; the address checks in package guard apply to every connection.
 func Send(ctx context.Context, t model.Target, arm Arm, in Input) (model.Exchange, error) {
 	var ex model.Exchange
-	if t.Transport == "sip" && arm == Perception {
-		return sendSIP(ctx, t, in)
-	}
 	endpoint := t.Endpoint
 	var body map[string]any
 	var err error
@@ -123,12 +164,87 @@ func Send(ctx context.Context, t model.Target, arm Arm, in Input) (model.Exchang
 		}
 		body, err = RenderTrigger(t, in)
 	default:
+		if t.Transport == "sip" {
+			return sendSIP(ctx, t, in)
+		}
+		if t.Transport == "bridge" {
+			return sendBridge(ctx, t, in)
+		}
 		body, err = Render(t, in)
 	}
 	if err != nil {
 		return ex, err
 	}
 	ex.Request = body
+	switch PathTransport(t, arm, endpoint) {
+	case "ws":
+		return sendWS(ctx, t, endpoint, body, in)
+	case "voice-ws":
+		return sendVoiceWS(ctx, t, endpoint, body, in)
+	case "tcp":
+		return sendTCP(ctx, t, endpoint, body, in)
+	case "mqtt":
+		return sendMQTT(ctx, t, endpoint, body, in)
+	}
+	return sendHTTP(ctx, t, endpoint, body, ex)
+}
+
+// PathTransport names the transport used for one arm. The perception arm uses
+// the target's Transport; the other arms use the scheme of their endpoint.
+func PathTransport(t model.Target, arm Arm, endpoint string) string {
+	if arm == Perception || arm == "" {
+		switch t.Transport {
+		case "ws", "tcp", "mqtt", "voice-ws", "sip", "bridge":
+			return t.Transport
+		}
+		return "http"
+	}
+	switch {
+	case strings.HasPrefix(endpoint, "ws://"), strings.HasPrefix(endpoint, "wss://"):
+		return "ws"
+	case strings.HasPrefix(endpoint, "tcp://"):
+		return "tcp"
+	}
+	return "http"
+}
+
+// StaticAndSecretHeaders returns the target's static headers with the secret
+// ones resolved from the environment. A secret whose variable is unset is an
+// error naming the variable, never the value.
+func StaticAndSecretHeaders(t model.Target) (map[string]string, error) {
+	out := map[string]string{}
+	for k, v := range t.Headers {
+		out[k] = v
+	}
+	for k, envName := range t.SecretHeaders {
+		v := os.Getenv(envName)
+		if v == "" {
+			return nil, fmt.Errorf("secret header %s: environment variable %s is not set", k, envName)
+		}
+		out[k] = v
+	}
+	return out, nil
+}
+
+// Timeout is the target's per-exchange timeout, 60 s when unset.
+func Timeout(t model.Target) time.Duration {
+	d := time.Duration(t.TimeoutSeconds) * time.Second
+	if d <= 0 {
+		d = 60 * time.Second
+	}
+	return d
+}
+
+// Finish parses a raw reply into the exchange with the target's response paths.
+func Finish(t model.Target, ex *model.Exchange, raw string) {
+	if t.ReplyAudioPath != "" {
+		raw = takeReplyAudio(t.ReplyAudioPath, raw, ex)
+	}
+	ex.RawResponse = raw
+	ex.ResponseText, ex.Actions, ex.Perceived = Parse(raw, t.ResponsePath, t.ActionsPath, t.PerceivedPath)
+}
+
+func sendHTTP(ctx context.Context, t model.Target, endpoint string, body map[string]any, ex model.Exchange) (model.Exchange, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return ex, errors.New("target endpoint must be an absolute http(s) URL")
@@ -143,27 +259,20 @@ func Send(ctx context.Context, t model.Target, arm Arm, in Input) (model.Exchang
 		return ex, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	for k, v := range t.Headers {
-		req.Header.Set(k, v)
+	headers, err := StaticAndSecretHeaders(t)
+	if err != nil {
+		return ex, err
 	}
-	for k, envName := range t.SecretHeaders {
-		v := os.Getenv(envName)
-		if v == "" {
-			return ex, fmt.Errorf("secret header %s: environment variable %s is not set", k, envName)
-		}
+	for k, v := range headers {
 		req.Header.Set(k, v)
-	}
-	timeout := time.Duration(t.TimeoutSeconds) * time.Second
-	if timeout <= 0 {
-		timeout = 60 * time.Second
 	}
 	client := &http.Client{
-		Timeout: timeout,
+		Timeout: Timeout(t),
 		CheckRedirect: func(*http.Request, []*http.Request) error {
 			return errors.New("redirects are not followed")
 		},
 		Transport: &http.Transport{
-			DialContext:         (&net.Dialer{Timeout: 10 * time.Second}).DialContext,
+			DialContext:         guard.DialContext(true, 10*time.Second),
 			TLSHandshakeTimeout: 10 * time.Second,
 		},
 	}
@@ -181,8 +290,7 @@ func Send(ctx context.Context, t model.Target, arm Arm, in Input) (model.Exchang
 		return ex, errors.New(ex.Error)
 	}
 	ex.Status = resp.StatusCode
-	ex.RawResponse = string(raw)
-	ex.ResponseText, ex.Actions, ex.Perceived = Parse(ex.RawResponse, t.ResponsePath, t.ActionsPath, t.PerceivedPath)
+	Finish(t, &ex, string(raw))
 	return ex, nil
 }
 

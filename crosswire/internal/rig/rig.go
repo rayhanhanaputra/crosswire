@@ -75,6 +75,21 @@ func (r *Rig) Blink(pulses []signal.Pulse, unitMs int) (play Reply, stop Reply, 
 	return play, stop, err
 }
 
+// Play starts a pulse timeline and returns when the firmware has acknowledged
+// it. The firmware plays it on its own and its watchdog switches the LED off
+// after watchdogMs; the caller must still call Stop.
+func (r *Rig) Play(pulses []signal.Pulse, unitMs, watchdogMs int) (Reply, error) {
+	cmd, err := signal.LEDSequenceCommand(pulses, r.Pin, unitMs, watchdogMs, 256)
+	if err != nil {
+		return Reply{}, err
+	}
+	reply, err := r.send(cmd)
+	if err == nil && reply.Status != "ok" {
+		err = fmt.Errorf("rig refused sequence: %s", reply.Detail)
+	}
+	return reply, err
+}
+
 // Stop sends the mandatory stop command.
 func (r *Rig) Stop() (Reply, error) {
 	reply, err := r.send(signal.LEDStopCommand(r.Pin))

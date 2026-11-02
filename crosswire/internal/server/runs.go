@@ -57,12 +57,26 @@ func (s *Server) handlePreview(w http.ResponseWriter, r *http.Request) {
 			storeErr(w, err)
 			return
 		}
-		rendered, err := connector.Render(t, enc.Input)
-		if err != nil {
-			writeErr(w, 400, fmt.Errorf("request_template: %w", err))
-			return
+		prev := enc.Input
+		if t.Mapper.Enabled {
+			prev.Mapped = map[string]any{"_": "produced by the input mapper at send time"}
+		}
+		wire := connector.Preview(t, enc.Input)
+		var rendered map[string]any
+		if b, ok := wire["bridge"].(map[string]any); ok {
+			rendered, _ = b["action"].(map[string]any)
+		} else {
+			rendered, err = connector.Render(t, prev)
+			if err != nil {
+				writeErr(w, 400, fmt.Errorf("request_template: %w", err))
+				return
+			}
 		}
 		out["request"] = rendered
+		out["wire"] = wire
+		if t.Mapper.Enabled {
+			out["mapper"] = map[string]any{"model": t.Mapper.Model, "note": "The request fields marked {{mapped}} are written by an LLM when you send, and are never evidence."}
+		}
 		if t.DirectEndpoint != "" {
 			direct, err := connector.RenderDirect(t, connector.Input{Source: "chat/text", Content: enc.Input.Content, Canary: canary})
 			if err != nil {
@@ -98,10 +112,12 @@ func (s *Server) createRun(w http.ResponseWriter, r *http.Request) {
 		id := engine.NewID()
 		req.RunID = id
 		j := s.jobs.start(id)
+		ctx, end := s.active.begin(s.base)
 		go func() {
 			defer s.jobs.forget(id)
+			defer end()
 			eng := s.engine(func(_ string, t model.Trial) { j.emit("trial", t, false) })
-			run, err := eng.Run(s.base, req)
+			run, err := eng.Run(ctx, req)
 			if err != nil {
 				run.Error = err.Error()
 			}
@@ -110,7 +126,9 @@ func (s *Server) createRun(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusAccepted, map[string]string{"run_id": id})
 		return
 	}
-	run, err := s.engine(nil).Run(r.Context(), req)
+	ctx, end := s.active.begin(r.Context())
+	defer end()
+	run, err := s.engine(nil).Run(ctx, req)
 	if err != nil {
 		writeErr(w, 500, err)
 		return
@@ -172,6 +190,12 @@ func artifactType(kind string) (contentType, ext string) {
 		return "text/calendar; charset=utf-8", "ics"
 	case "message/rfc822":
 		return "message/rfc822", "eml"
+	case "application/json":
+		return "application/json", "json"
+	case "application/x-ndef":
+		return "application/octet-stream", "ndef"
+	case "application/x-ble-ad":
+		return "application/octet-stream", "bleadv"
 	}
 	return "audio/wav", "wav" // pulses are stored as a Morse sidetone WAV
 }
@@ -209,6 +233,23 @@ func (s *Server) getReplyArtifact(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(data)
 }
 
+// getObserverShot serves a browser observer screenshot of one trial.
+func (s *Server) getObserverShot(w http.ResponseWriter, r *http.Request) {
+	phase := r.PathValue("phase")
+	if phase != "before" && phase != "after" {
+		writeErr(w, 404, errors.New("not found"))
+		return
+	}
+	data, err := s.st.GetArtifact(artifactKey(r.PathValue("id"), r.PathValue("arm"), r.PathValue("index")) + "/observer-" + phase)
+	if err != nil {
+		storeErr(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	_, _ = w.Write(data)
+}
+
 // getBundle streams the evidence for one run: run.json, every stored
 // artifact, the sink events seen by its trials, and a manifest of SHA-256
 // sums so the bundle can back a knowledge-base claim.
@@ -228,6 +269,16 @@ func (s *Server) getBundle(w http.ResponseWriter, r *http.Request) {
 			if !seen[ev.ID] {
 				seen[ev.ID] = true
 				events = append(events, ev)
+			}
+		}
+		if t.Observer != nil {
+			for _, o := range []*model.Observation{t.Observer.Before, t.Observer.After} {
+				if o == nil || o.ScreenshotRef == "" {
+					continue
+				}
+				if shot, err := s.st.GetArtifact(o.ScreenshotRef); err == nil {
+					files[fmt.Sprintf("artifacts/%s-%d-observer-%s.png", t.Arm, t.Index, o.Phase)] = shot
+				}
 			}
 		}
 		if run.Channel.Artifact == nil || t.Arm == "direct" {
@@ -410,15 +461,19 @@ func (s *Server) createIntruder(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.URL.Query().Get("async") == "1" {
 		j := s.jobs.start(campaign)
+		ctx, end := s.active.begin(s.base)
 		go func() {
 			defer s.jobs.forget(campaign)
-			res := s.runCampaign(s.base, ir, campaign, func(row intruderRow) { j.emit("run", row, false) })
+			defer end()
+			res := s.runCampaign(ctx, ir, campaign, func(row intruderRow) { j.emit("run", row, false) })
 			j.emit("done", res, true)
 		}()
 		writeJSON(w, http.StatusAccepted, map[string]string{"campaign_id": campaign})
 		return
 	}
-	writeJSON(w, 200, s.runCampaign(r.Context(), ir, campaign, nil))
+	ctx, end := s.active.begin(r.Context())
+	defer end()
+	writeJSON(w, 200, s.runCampaign(ctx, ir, campaign, nil))
 }
 
 func (s *Server) intruderEvents(w http.ResponseWriter, r *http.Request) {
