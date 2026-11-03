@@ -813,9 +813,9 @@ function adapterSelect(targetSel) {
 
 function adapterNote(info) {
   if (!info) return h('p', {});
-  return h('p', { class: 'muted small' },
-    'source ', h('span', { class: 'mono' }, info.source), '  artifact ', h('span', { class: 'mono' }, info.artifact), ' ',
-    info.modeled ? h('span', { class: 'tag modeled' }, 'MODELED') : null, ' ', info.note);
+  return h('p', { class: 'facts adapter-facts', title: info.note || '' },
+    h('span', {}, info.source), h('span', {}, info.artifact),
+    info.modeled ? h('span', { class: 'tag modeled' }, 'modeled') : null);
 }
 
 // needsAck is true for production targets and for anything that drives hardware.
@@ -916,7 +916,8 @@ function initTargets() {
   const F = {};
   const text = (key, label, opts = {}) => {
     F[key] = h(opts.area ? 'textarea' : 'input', { type: opts.area ? null : 'text', rows: opts.rows, placeholder: opts.placeholder || '', spellcheck: 'false' });
-    return h('label', { class: 'f' }, label, F[key], opts.hint ? h('span', { class: 'hint' }, opts.hint) : null);
+    return h('label', { class: 'f', title: opts.tip || '' }, label, F[key],
+      opts.hint ? h('span', { class: 'hint' }, opts.hint) : null);
   };
   const pick = (key, label, options, hint) => {
     F[key] = selectOf(options);
@@ -948,7 +949,7 @@ function initTargets() {
         text('sip_from', 'Caller user part', { placeholder: 'crosswire' }),
         text('sip_local_ip', 'Local IP to advertise', { placeholder: 'from routing' }),
         text('sip_username', 'Digest username (optional)'),
-        text('sip_password_env', 'Password env var NAME', { placeholder: 'SIP_PASSWORD', hint: 'An environment variable name, never the value.' }),
+        text('sip_password_env', 'Password env var NAME', { placeholder: 'SIP_PASSWORD', tip: 'An environment variable name, never the value.' }),
         text('sip_ring_seconds', 'Ring timeout (s)', { placeholder: '32' }),
         text('sip_listen_seconds', 'Listen after playing (s)', { placeholder: '20' }))),
     group('ws', 'WebSocket',
@@ -959,7 +960,7 @@ function initTargets() {
       h('div', { class: 'grid2' },
         pick('tcp_send', 'Send', [['json', 'the request template as JSON'], ['raw', 'the decoded content only']]),
         pick('tcp_framing', 'Framing', [['terminator', 'terminator'], ['length', '4-byte length prefix']]),
-        text('tcp_terminator', 'Terminator', { placeholder: '\\n', hint: 'Escapes \\n \\r \\t \\0 \\xNN; "none" for empty.' }),
+        text('tcp_terminator', 'Terminator', { placeholder: '\\n', tip: 'Escapes \\n \\r \\t \\0 \\xNN; "none" for empty.' }),
         pick('tcp_read_until', 'Read the reply until', [['terminator', 'terminator'], ['close', 'the server closes'], ['idle', 'the line goes quiet'], ['none', 'do not read (the sink is the evidence)']]),
         text('tcp_idle_ms', 'Quiet time for idle (ms)', { placeholder: '500' }),
         text('tcp_max_bytes', 'Reply limit (bytes)', { placeholder: '65536' }),
@@ -982,24 +983,23 @@ function initTargets() {
         text('vws_max_events', 'Reply event limit', { placeholder: '100' }),
         text('vws_done_path', 'Done field', { placeholder: 'type' }),
         text('vws_done_value', 'Done value', { placeholder: 'session.done' }),
-        text('vws_reply_audio_path', 'Reply audio field', { placeholder: 'audio', hint: 'Base64 audio in a reply event, kept as the trial\'s reply artifact.' }),
+        text('vws_reply_audio_path', 'Reply audio field', { placeholder: 'audio', tip: 'Base64 audio in a reply event, kept as the trial\'s reply artifact.' }),
         text('vws_chunk_template', 'Chunk event', { area: true, rows: 2, placeholder: '{"type":"audio.chunk","audio":"{{audio_chunk_base64}}"}' }),
         text('vws_end_template', 'End event', { area: true, rows: 2, placeholder: '{"type":"audio.end"}' }),
-        text('vws_cancel_template', 'Cancel event', { area: true, rows: 2, placeholder: '{"type":"session.cancel"}', hint: 'Sent when an exchange fails midway.' }))),
+        text('vws_cancel_template', 'Cancel event', { area: true, rows: 2, placeholder: '{"type":"session.cancel"}', tip: 'Sent when an exchange fails midway.' }))),
     group('bridge', 'Device bridge',
       h('p', { class: 'note small' }, 'Drives real hardware through an HTTP bridge. Allowlisted device and resource only; a stop is sent after every action, and every run needs your acknowledgement. Try it with `crosswire bridge --simulate`.'),
       h('div', { class: 'grid2' },
         pick('br_kind', 'Kind', [['led', 'LED sequence (binary-toggle, morse-led)'], ['gpio', 'GPIO sequence (binary-toggle, morse-led)'], ['ble', 'BLE advertisement (ble-advert)'], ['nfc', 'NFC emulation (nfc-tag)']]),
-        text('br_stop_endpoint', 'Stop URL', { placeholder: 'http://127.0.0.1:9910/stop', hint: 'Same origin as the endpoint above.' }),
+        text('br_stop_endpoint', 'Stop URL', { placeholder: 'http://127.0.0.1:9910/stop', tip: 'Must be the same origin as the action URL.' }),
         text('br_device_id', 'Device id', { placeholder: 'arduino-01' }),
         text('br_resource', 'Resource', { placeholder: 'pin-9' }),
         text('br_allowed_devices', 'Allowed device ids', { area: true, rows: 2, placeholder: 'one per line' }),
         text('br_allowed_resources', 'Allowed resources', { area: true, rows: 2, placeholder: 'one per line' }),
-        text('br_duration_ms', 'Longest stimulus (ms)', { placeholder: '5000', hint: '100 to 30000.' }),
-        text('br_unit_ms', 'Pulse unit (ms)', { placeholder: '200', hint: '50 to 2000, for LED and GPIO.' }),
+        text('br_duration_ms', 'Longest stimulus (ms)', { placeholder: '5000', tip: '100 to 30000 ms.' }),
+        text('br_unit_ms', 'Pulse unit (ms)', { placeholder: '200', tip: '50 to 2000 ms. LED and GPIO only.' }),
         text('br_stop_template', 'Stop request body', { area: true, rows: 2, placeholder: BRIDGE_STOP })),
-      h('div', { class: 'row' }, h('button', { class: 'btn', type: 'button', onclick: fillBridgeDefaults }, 'Fill defaults for this kind'),
-        h('span', { class: 'muted small' }, 'Sets the request template, stop URL and resource.'))),
+      h('div', { class: 'row' }, h('button', { class: 'btn', type: 'button', title: 'Sets the request template, stop URL and resource.', onclick: fillBridgeDefaults }, 'Fill defaults for this kind'))),
   ];
 
   const form = h('form', { onsubmit: onSave },
@@ -1008,10 +1008,10 @@ function initTargets() {
     h('div', { class: 'grid2' },
       text('name', 'Name'),
       h('label', { class: 'f' }, 'Environment', F.environment),
-      h('label', { class: 'f' }, 'Transport', F.transport, h('span', { class: 'hint' }, 'How the artifact reaches the agent.')),
+      h('label', { class: 'f', title: 'How the artifact reaches the agent. The chat and trigger paths follow the scheme of their own URL.' }, 'Transport', F.transport),
       text('endpoint', 'Perception endpoint', { placeholder: ENDPOINT_HINT.http }),
       text('direct_endpoint', 'Chat endpoint (optional)', { placeholder: 'http://127.0.0.1:7201/chat' }),
-      text('trigger_endpoint', 'Trigger endpoint (optional)', { placeholder: 'http://127.0.0.1:7206/chat', hint: 'Makes trials two-phase: deliver, then trigger.' }),
+      text('trigger_endpoint', 'Trigger endpoint (optional)', { placeholder: 'http://127.0.0.1:7206/chat', tip: 'Makes trials two-phase: deliver, then trigger.' }),
       text('trigger_template', 'Trigger template', { placeholder: '{"message":"Anything to handle?","session":"{{canary}}"}' }),
       text('method', 'Method', { placeholder: 'POST' }),
       text('timeout_seconds', 'Timeout (seconds)', { placeholder: '30' }),
@@ -1021,21 +1021,21 @@ function initTargets() {
     h('h3', {}, 'Request'),
     h('div', { class: 'grid2' },
       text('request_template', 'Request template', { area: true, rows: 3, placeholder: '{"source":"{{source}}","input":"{{content}}"}',
-        hint: 'Also {{artifact_hex}}, {{artifact_base64}}, {{blink_units}}, {{unit_ms}}, {{mapped}}.' }),
+        tip: 'Also {{artifact_hex}}, {{artifact_base64}}, {{blink_units}}, {{unit_ms}} and, with the input mapper, {{mapped}}.' }),
       text('direct_template', 'Direct template', { area: true, rows: 3, placeholder: '{"message":"{{content}}"}' }),
-      text('headers', 'Headers', { area: true, rows: 2, placeholder: 'Name: value', hint: 'Plain text. Credentials go in secret headers.' }),
-      text('secret_headers', 'Secret headers', { area: true, rows: 2, placeholder: 'Authorization: TARGET_TOKEN', hint: 'Header name, then an environment variable name.' })),
+      text('headers', 'Headers', { area: true, rows: 2, placeholder: 'Name: value', tip: 'Plain text. Credentials go in secret headers.' }),
+      text('secret_headers', 'Secret headers', { area: true, rows: 2, placeholder: 'Authorization: TARGET_TOKEN', tip: 'Header name, then an environment variable name.' })),
     h('h3', {}, 'Response paths'),
     h('div', { class: 'grid2' },
       text('response_path', 'Reply text', { placeholder: 'text' }),
       text('actions_path', 'Actions', { placeholder: 'actions' }),
       text('perceived_path', 'Perceived', { placeholder: 'perceived' }),
-      text('reply_audio_path', 'Reply audio', { placeholder: 'audio', hint: 'For a service that answers in speech.' })),
+      text('reply_audio_path', 'Reply audio', { placeholder: 'audio', tip: 'For a service that answers in speech.' })),
     h('h3', {}, 'Evidence rules'),
     h('div', { class: 'grid2' },
-      text('forbidden_tools', 'Forbidden tools', { area: true, rows: 2, placeholder: 'one per line', hint: 'A hit needs a sink event for one of these.' }),
-      text('argument_limits', 'Argument limits', { area: true, rows: 2, placeholder: 'transfer_funds.amount ≤ 100', hint: 'Over the limit is a hit, no canary needed.' }),
-      text('response_markers', 'Response markers', { area: true, rows: 2, placeholder: 'one per line', hint: 'Never count as a hit.' }),
+      text('forbidden_tools', 'Forbidden tools', { area: true, rows: 2, placeholder: 'one per line', tip: 'A hit needs a sink event for one of these.' }),
+      text('argument_limits', 'Argument limits', { area: true, rows: 2, placeholder: 'transfer_funds.amount ≤ 100', tip: 'Over the limit is a hit, no canary needed.' }),
+      text('response_markers', 'Response markers', { area: true, rows: 2, placeholder: 'one per line', tip: 'Shown as hints. They never count as a hit.' }),
       h('label', { class: 'check' }, F.require_canary, 'Require canary in tool arguments')),
 
     h('details', { class: 'disclosure', id: 'sec-observer' },
@@ -1045,13 +1045,13 @@ function initTargets() {
         h('div', { class: 'grid2' },
           pick('obs_kind', 'Observer', [['none', 'none'], ['http', 'http state endpoint'], ['browser', 'browser page (needs Chrome or Chromium)']]),
           text('obs_url', 'State URL or page URL', { placeholder: 'http://127.0.0.1:8080/state' }),
-          text('obs_selector', 'CSS selector (browser)', { placeholder: '#status', hint: 'The element whose text is the state.' }),
-          text('obs_path', 'JSON path (http)', { placeholder: 'door.state', hint: 'Compared as text. Empty compares the whole body.' }),
+          text('obs_selector', 'CSS selector (browser)', { placeholder: '#status', tip: 'The element whose text is the state.' }),
+          text('obs_path', 'JSON path (http)', { placeholder: 'door.state', tip: 'Compared as text. Empty compares the whole body.' }),
           text('obs_wait_ms', 'Wait before the second read (ms)', { placeholder: '1000' }),
           text('obs_timeout_seconds', 'Read timeout (s)', { placeholder: '10' }),
           pick('obs_nonce', 'Nonce in the state', [['required', 'required: the state can show it'], ['not_visible', 'not visible: count a change as a weak hit']]),
-          text('obs_reset_url', 'Reset URL (optional)', { placeholder: 'http://127.0.0.1:8080/reset', hint: 'POSTed before each trial, to reset the state.' }),
-          text('obs_secret_headers', 'Secret headers (http)', { area: true, rows: 2, placeholder: 'X-Api-Key: STATE_KEY', hint: 'Header name and env var NAME.' }),
+          text('obs_reset_url', 'Reset URL (optional)', { placeholder: 'http://127.0.0.1:8080/reset', tip: 'POSTed before each trial, to reset the state.' }),
+          text('obs_secret_headers', 'Secret headers (http)', { area: true, rows: 2, placeholder: 'X-Api-Key: STATE_KEY', tip: 'Header name, then an environment variable name.' }),
           flag('obs_screenshot', 'Screenshot before and after (browser)'),
           flag('obs_live', 'Keep the page open between reads (browser)')))),
 
@@ -1068,7 +1068,7 @@ function initTargets() {
           text('map_required_keys', 'Required output keys', { area: true, rows: 2, placeholder: 'one per line' }),
           text('map_timeout', 'Timeout (s)', { placeholder: '20' }),
           text('map_instructions', 'Instructions', { area: true, rows: 3, placeholder: 'Describe the target\'s request schema. Return {"payload": {"text": ...}}.',
-            hint: 'The request template must contain {{mapped}}.' })),
+            tip: 'The request template must contain {{mapped}}.' })),
         h('h3', {}, 'Response mapper'),
         h('div', { class: 'grid2' },
           flag('rmap_enabled', 'Read reply text and actions out of an unstructured reply'),
@@ -1360,9 +1360,8 @@ function initRepeater() {
       h('div', { class: 'pane' },
         h('div', { class: 'row spread' }, h('h2', {}, 'Control fields'),
           h('span', { class: 'row' },
-            h('label', { class: 'check' }, useControl, 'Send control arm'),
+            h('label', { class: 'check', title: 'Benign text of similar length through the same channel. Without it a verdict cannot be confirmed.' }, useControl, 'Send control arm'),
             h('button', { class: 'btn', type: 'button', onclick: () => { dirty = false; syncControl(); } }, 'Match length'))),
-        h('p', { class: 'muted small' }, 'Benign text of similar length through the same channel. Without it a verdict cannot be confirmed.'),
         controlBox),
       h('div', { class: 'pane run' },
         h('div', { class: 'run-opts' },
@@ -1516,12 +1515,11 @@ function initIntruder() {
     h('div', {},
       h('div', { class: 'pane' },
         h('div', { class: 'grid2' }, h('label', { class: 'f' }, 'Target', target), h('label', { class: 'f' }, 'Adapter', adapter)),
-        note, h('h3', {}, 'Fields template'),
-        h('p', { class: 'muted small' }, 'Exactly one field holds {{payload}}.'), tplBox),
+        note, h('h3', { title: 'Exactly one field holds {{payload}}.' }, 'Fields template'), tplBox),
       h('div', { class: 'pane' }, h('label', { class: 'f' }, 'Payloads', payloads)),
       h('div', { class: 'pane' },
         h('div', { class: 'row spread' }, h('h2', {}, 'Control fields'),
-          h('span', { class: 'row' }, h('label', { class: 'check' }, useControl, 'Send control arm'),
+          h('span', { class: 'row' }, h('label', { class: 'check', title: 'Benign text of similar length through the same channel. Without it a verdict cannot be confirmed.' }, useControl, 'Send control arm'),
             h('button', { class: 'btn', type: 'button', onclick: () => { dirty = false; syncControl(); } }, 'Match length'))),
         controlBox),
       h('div', { class: 'pane run' },
@@ -1628,7 +1626,7 @@ function initSink() {
       if (S.health) url.textContent = S.health.sink_url;
     } catch (ex) { clear(status).append(h('span', { class: 'err' }, ex.message)); }
   };
-  root.append(h('div', { class: 'row spread' }, h('h2', {}, 'Sink events'), h('p', { class: 'muted small' }, 'Targets POST every tool call, run or refused, to ', url)),
+  root.append(h('div', { class: 'row spread' }, h('h2', {}, 'Sink events'), h('p', { class: 'facts', title: 'Targets POST every tool call, executed or refused, to this URL.' }, url)),
     status,
     h('div', { class: 'tablewrap' }, h('table', {}, h('thead', {}, h('tr', {}, ['id', 'time', 'tool', 'result', 'target', 'session', 'arguments'].map((c) => h('th', {}, c)))), body)));
 }

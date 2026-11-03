@@ -212,7 +212,7 @@ footer {
 .run-opts label.check { min-height: 31px; }
 .run-go { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .run-go .btn { min-width: 92px; }
-.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 12px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 13px; align-items: start; }
 .muted { color: var(--muted); }
 .mono { font-family: var(--mono); font-size: 12px; }
 .small { font-size: 11.5px; }
@@ -235,17 +235,21 @@ footer {
 .pane.idle ol { margin: 6px 0 0; padding-left: 18px; color: var(--muted); display: grid; gap: 2px; text-align: left; }
 
 /* ---------- forms ---------- */
-label.f { display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--muted); font-weight: 550; min-width: 0; }
-label.f > .hint { font-weight: 400; }
-label.check { display: inline-flex; gap: 6px; align-items: center; min-height: 30px; font-size: 12.5px; }
+/* Form fields follow the original workbench: a small quiet label above a
+   34px control. A field that needs explaining carries it on the label's
+   title, so the grid keeps one rhythm. */
+label.f { display: flex; flex-direction: column; gap: 6px; font-size: 10px; color: var(--muted); min-width: 0; }
+label.f[title]:not([title=""]) { cursor: help; }
+label.f > .hint { font-size: 10px; line-height: 1.5; }
+label.check { display: inline-flex; gap: 8px; align-items: center; min-height: 34px; font-size: 12px; }
 input[type=text], input[type=number], input[type=url], select, textarea {
-  font: 13px var(--sans); color: var(--ink); background: var(--bg); border: 1px solid var(--line);
-  border-radius: var(--r); padding: 5px 8px; min-height: 31px; width: 100%; min-width: 0;
+  font: 11px var(--sans); color: var(--ink); background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r); padding: 0 9px; height: 34px; width: 100%; min-width: 0;
   transition: border-color .12s ease-out;
 }
 input:hover, select:hover, textarea:hover { border-color: var(--line-strong); }
 input:focus-visible, select:focus-visible, textarea:focus-visible { outline-offset: 0; border-color: var(--accent); }
-textarea { font-family: var(--mono); font-size: 12px; resize: vertical; min-height: 58px; line-height: 1.5; }
+textarea { font-family: var(--mono); font-size: 11px; resize: vertical; height: auto; min-height: 62px; padding: 8px 9px; line-height: 1.55; }
 input[type=number] { width: 88px; font-variant-numeric: tabular-nums; }
 input[type=file] { font-size: 12px; }
 input:disabled, select:disabled { opacity: .6; }
@@ -387,6 +391,8 @@ svg.pulses rect { fill: var(--ink); }
   border: 1px solid var(--line); border-radius: 999px; white-space: nowrap;
 }
 .facts > span.id { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.adapter-facts { margin: 0 0 2px; }
+.adapter-facts[title]:not([title=""]) { cursor: help; }
 
 /* A 64-char hash is for checking, not reading: show the head, keep the rest on hover. */
 .hash { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
