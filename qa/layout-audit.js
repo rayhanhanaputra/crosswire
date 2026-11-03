@@ -47,11 +47,26 @@ const WIDTHS=[1440,1100,820];
       await new Promise(r=>setTimeout(r,250));
       if (tab==='history') { await ev("(function(){const r=document.querySelector('#tab-history tr.click'); r&&r.click(); return true})()"); await new Promise(r=>setTimeout(r,900)); }
       const res=JSON.parse(await ev(probe(tab)));
-      const ok = !res.spills.length && !res.clipped.length && res.page<=1;
+      // A split whose tall side is the narrow one wastes the page: the run
+      // list sat in 909px of nothing while the detail crammed into 479.
+      const prop=JSON.parse(await ev(`(function(){
+        const s=document.querySelector('#tab-${tab} .split');
+        if(!s||getComputedStyle(s).gridTemplateColumns.split(' ').length<2) return 'null';
+        const kids=[...s.children];
+        const [a,b]=kids.map(c=>c.getBoundingClientRect());
+        // A side showing only its empty state is short because nothing has run
+        // yet, not because it was starved of width.
+        const idle=c=>{const p=c.querySelectorAll('.pane'); return p.length>0 && [...p].every(x=>x.classList.contains('idle'));};
+        const starved = (!idle(kids[1]) && a.height>b.height*2 && a.width<b.width*0.6) ||
+                        (!idle(kids[0]) && b.height>a.height*2 && b.width<a.width*0.6);
+        return JSON.stringify(starved? {aw:Math.round(a.width),ah:Math.round(a.height),bw:Math.round(b.width),bh:Math.round(b.height)} : null);
+      })()`));
+      const ok = !res.spills.length && !res.clipped.length && res.page<=1 && !prop;
       if(!ok) bad++;
       console.log(`${String(width).padEnd(5)} ${tab.padEnd(10)} ${ok?'ok':'ISSUES'}${res.page>1?'  pageScroll='+res.page:''}`);
       for(const s of res.spills)  console.log(`        spill +${String(s.s).padStart(4)}px ${s.name.slice(0,42).padEnd(44)} ${JSON.stringify(s.txt)}`);
       for(const c of res.clipped) console.log(`        clipped          ${c.name.slice(0,42).padEnd(44)} ${JSON.stringify(c.txt)}`);
+      if(prop) console.log(`        starved column: the taller side is the narrower one (${prop.aw}x${prop.ah} vs ${prop.bw}x${prop.bh})`);
     }
   }
   console.log(bad? `\n${bad} page/width combinations have issues` : '\nall pages clean at all widths');

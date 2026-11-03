@@ -658,10 +658,18 @@ function trialRow(t, runId) {
     const [rid, arm, idx] = ex.reply_artifact.split('/');
     responseTd.append(h('audio', { controls: true, src: `/api/runs/${encodeURIComponent(rid)}/artifacts/${arm}/${idx}/reply`, title: 'far end audio' }));
   }
-  const sinkTd = h('td', { class: 'mono' });
+  const sinkTd = h('td', { class: 'mono sink-cell' });
+  const sinkSeen = new Map();
   for (const ev of t.sink || []) {
-    sinkTd.append(h('div', {}, ev.blocked ? h('span', { class: 'tag' }, 'refused') : null, ev.blocked ? ' ' : null,
-      `${ev.name} ${JSON.stringify(ev.arguments)}`, ev.blocked && ev.reason ? ` (${ev.reason})` : ''));
+    const key = `${ev.blocked ? 1 : 0}|${ev.name}|${JSON.stringify(ev.arguments)}|${ev.reason || ''}`;
+    const prev = sinkSeen.get(key);
+    if (prev) { prev.n += 1; continue; }
+    sinkSeen.set(key, { ev, n: 1 });
+  }
+  for (const { ev, n } of sinkSeen.values()) {
+    sinkTd.append(h('div', {}, ev.blocked ? [h('span', { class: 'tag' }, 'refused'), ' '] : null,
+      `${ev.name} ${JSON.stringify(ev.arguments)}`, ev.blocked && ev.reason ? ` (${ev.reason})` : '',
+      n > 1 ? h('span', { class: 'xn' }, ` ×${n}`) : null));
   }
   const outcome = t.hit ? ['hit-yes', 'hit'] : t.attempted ? ['', 'attempted'] : ['muted', 'no'];
   const outcomeTd = h('td', { class: outcome[0], title: 'hit = forbidden call executed or observer change with the trial\'s nonce; attempted = refused by the target' }, outcome[1],
@@ -1556,13 +1564,16 @@ function initHistory() {
         // attempted belongs on the row, but not as width: it is a hover away.
         const att = (a) => (a && a.reached && a.attempted != null ? `${a.attempted} forbidden call(s) attempted, ${a.hits} executed` : '');
         const tr = h('tr', { class: 'click' + (r.id === selected ? ' sel' : ''), tabindex: 0, 'data-id': r.id },
-          h('td', { class: 'nowrap', title: fmtTime(r.started_at) }, fmtShort(r.started_at)), h('td', {}, badge(r.verdict.outcome)),
-          h('td', { class: 'target' }, r.target_name || r.target_id),
-          h('td', { class: 'adapter' }, h('span', { class: 'nm' }, r.channel.adapter),
-            r.channel.modeled ? h('span', { class: 'tag modeled' }, 'modeled') : null),
-          h('td', { class: 'mode' }, r.mode),
-          h('td', { class: 'mono nowrap', title: att(inj) }, kn(inj)),
-          h('td', { class: 'mono nowrap', title: att(ctl) }, kn(ctl)));
+          h('td', {},
+            h('div', { class: 'r-top' }, badge(r.verdict.outcome),
+              h('span', { class: 'r-when', title: fmtTime(r.started_at) }, fmtShort(r.started_at))),
+            h('div', { class: 'r-what' }, h('span', { class: 'r-target' }, r.target_name || r.target_id),
+              h('span', { class: 'r-sep' }, '/'), h('span', { class: 'r-adapter' }, r.channel.adapter),
+              r.channel.modeled ? h('span', { class: 'tag modeled' }, 'modeled') : null),
+            h('div', { class: 'r-arms' },
+              h('span', { title: att(inj) }, 'injected ', h('b', {}, kn(inj))),
+              h('span', { title: att(ctl) }, 'control ', h('b', {}, kn(ctl))),
+              h('span', { class: 'r-mode' }, r.mode))));
         tr.addEventListener('click', () => select(r.id));
         tr.addEventListener('keydown', (e) => { if (e.key === 'Enter') select(r.id); });
         body.append(tr);
@@ -1580,12 +1591,12 @@ function initHistory() {
 
   openRun = async (id) => { showTab('history'); await load(); await select(id); };
 
-  root.append(h('div', { class: 'split runs' },
-    h('div', { class: 'pane' }, h('div', { class: 'row spread' }, h('h2', {}, 'Runs, newest first'),
-      h('button', { class: 'btn small-btn', type: 'button', onclick: load }, 'Refresh')),
+  root.append(h('div', { class: 'split hist' },
+    h('div', { class: 'pane runlist' },
+      h('div', { class: 'row spread' }, h('h2', {}, 'Runs'),
+        h('button', { class: 'btn small-btn', type: 'button', onclick: load }, 'Refresh')),
       status,
-      h('div', { class: 'tablewrap' }, h('table', {},
-        h('thead', {}, h('tr', {}, ['started', 'verdict', 'target', 'adapter', 'mode', 'injected k/N', 'control k/N'].map((c) => h('th', {}, c)))), body))),
+      h('div', { class: 'tablewrap' }, h('table', {}, body))),
     detail));
   tabHooks.history = load;
 }

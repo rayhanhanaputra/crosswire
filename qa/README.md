@@ -58,8 +58,13 @@ in a headless browser and fails on two things a screenshot makes obvious but a
 unit test never sees:
 
 - an element painted past the right edge of its tab section (the grid row that
-  is wider than the pane holding it), and
-- text clipped with no ellipsis and no `title`, so the reader cannot recover it.
+  is wider than the pane holding it),
+- text clipped with no ellipsis and no `title`, so the reader cannot recover it,
+  and
+- a **starved column**: a split whose taller side is the narrower one, which is
+  how History ended up with a 909x81 run list beside a 479x3201 detail. A side
+  showing only its empty state is excluded, since it is short because nothing
+  has run yet.
 
 Needs node and a Chrome or Chromium; set `CROSSWIRE_CHROME` if it is not in a
 standard location. It is not part of `make qa`, because it needs a browser.

@@ -167,11 +167,24 @@ footer {
 /* ---------- layout ---------- */
 .split { display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); gap: 16px; align-items: start; }
 .split.wide-left { grid-template-columns: minmax(340px, 480px) minmax(0, 1fr); }
-/* History: the run table has seven columns, so it takes the wide side and the
-   selected run's detail takes the rest. */
-/* The seven-column table needs real room before the detail pane gets any. */
-.split.runs { grid-template-columns: minmax(0, 1.9fr) minmax(300px, 1fr); }
-@media (max-width: 1250px) { .split.runs { grid-template-columns: minmax(0, 1fr); } }
+/* History: the run list is a picker of one row each; the detail holds the
+   verdict, the arms, the artifact and the trial table, so it takes the room. */
+.split.hist { grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); }
+@media (max-width: 1000px) { .split.hist { grid-template-columns: minmax(0, 1fr); } }
+
+/* Each run reads as a card: verdict and time, what was run, then the two arms. */
+.runlist .tablewrap { border: 0; border-radius: 0; margin: 0 -15px -13px; background: none; }
+.runlist table { font-size: inherit; }
+.runlist td { padding: 9px 15px; border-bottom: 1px solid var(--line-soft); }
+.runlist tr:last-child td { border-bottom: 0; }
+.r-top { display: flex; align-items: center; gap: 8px; }
+.r-when { color: var(--muted); font-size: 11.5px; margin-left: auto; white-space: nowrap; }
+.r-what { display: flex; align-items: center; gap: 5px; margin-top: 5px; font: 12px var(--mono); overflow-wrap: anywhere; }
+.r-target { color: var(--ink); overflow-wrap: anywhere; }
+.r-sep, .r-adapter { color: var(--muted); }
+.r-arms { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 5px; font-size: 11px; color: var(--muted); }
+.r-arms b { font-family: var(--mono); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); }
+.r-arms .r-mode { margin-left: auto; }
 @media (max-width: 900px) { .split, .split.wide-left { grid-template-columns: minmax(0, 1fr); } }
 /* A card: flat on the field, a ruled heading strip, 15px gutters. */
 .pane {
@@ -344,7 +357,9 @@ td.mode, th.mode { font-size: 11.5px; color: var(--muted); }
 td.adapter .nm { font-family: var(--mono); font-size: 11.5px; }
 td.adapter .tag { margin-left: 6px; vertical-align: 1px; }
 .hint-find { color: var(--muted); font-style: italic; }
-td.findings { min-width: 22ch; max-width: 34ch; font-size: 11.5px; }
+td.findings { min-width: 22ch; max-width: 40ch; font-size: 11.5px; }
+td.sink-cell { max-width: 46ch; font-size: 11.5px; }
+td.sink-cell > div + div { margin-top: 3px; }
 td.findings > div + div { margin-top: 3px; }
 .xn { color: var(--muted); font-variant-numeric: tabular-nums; }
 .hit-yes { font-weight: 700; color: var(--hit); }
