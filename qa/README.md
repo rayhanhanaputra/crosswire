@@ -64,7 +64,17 @@ unit test never sees:
 - a **starved column**: a split whose taller side is the narrower one, which is
   how History ended up with a 909x81 run list beside a 479x3201 detail. A side
   showing only its empty state is excluded, since it is short because nothing
-  has run yet.
+  has run yet,
+- a **wrapped row**: a `.row` whose children no longer share a vertical centre,
+  which is what made the Targets form heading sit 28px off its own controls,
+- a **ragged field row**: controls on one row of a field grid that do not share
+  a centre line — a checkbox has no label above it, so it floats up unless the
+  row is reserved for it, and
+- a **heading step**: the two sides of a split opening at different heights.
+
+The suite refuses to start when something already holds port 7117 or 9333.
+Without that it will happily drive the browser against a server it did not
+start, and report on a build that is not the one you just made.
 
 Needs node and a Chrome or Chromium; set `CROSSWIRE_CHROME` if it is not in a
 standard location. It is not part of `make qa`, because it needs a browser.

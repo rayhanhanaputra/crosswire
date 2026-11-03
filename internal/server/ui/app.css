@@ -192,17 +192,30 @@ footer {
   padding: 13px 15px; min-width: 0;
 }
 .pane + .pane { margin-top: 12px; }
-.pane > h2:first-child {
+/* Panes stack with a 12px gap, but the two sides of a split are grid columns,
+   not a stack: the second must not be pushed below the first's heading. When
+   the split collapses to one column the grid's own 16px gap separates them. */
+.split > .pane + .pane { margin-top: 0; }
+/* The ruled heading strip. A pane's heading is its first child, or the first
+   child of a form filling the pane, so both reach the same 45px strip. */
+.pane > h2:first-child,
+.pane > form:first-child > h2:first-child {
   display: flex; align-items: center; gap: 8px; min-height: 45px;
   margin: -13px -15px 13px; padding: 0 15px;
   border-bottom: 1px solid var(--line-soft);
 }
-.pane > .row.spread:first-child {
+.pane > .row.spread:first-child,
+.pane > form:first-child > .row.spread:first-child {
   min-height: 45px; margin: -13px -15px 13px; padding: 0 15px;
   border-bottom: 1px solid var(--line-soft); flex-wrap: nowrap;
 }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .row.spread { justify-content: space-between; }
+/* A control pair beside a heading stays on the heading's line: the group does
+   not wrap, and the select gives up width before the button loses its label. */
+.row.spread > .row { flex-wrap: nowrap; flex: 0 1 auto; min-width: 0; }
+.row.spread > .row > select { flex: 0 1 auto; min-width: 7ch; }
+.row.spread > .row > .btn { flex: none; }
 
 /* The run panel: options on one baseline, the action on its own line so the
    primary button is never crowded by a number field. */
@@ -242,6 +255,14 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-size: 10px; colo
 label.f[title]:not([title=""]) { cursor: help; }
 label.f > .hint { font-size: 10px; line-height: 1.5; }
 label.check { display: inline-flex; gap: 8px; align-items: center; min-height: 34px; font-size: 12px; }
+/* A checkbox in a field grid has no label row of its own, so it floats up
+   against the labels of the fields beside it. Reserve that row — a 10px
+   label on a 1.5 line box is 15px, plus the 6px label-to-control gap — and
+   give the checkbox the same 34px control band underneath, so it centres on
+   exactly the line the inputs beside it sit on. */
+.grid2 > label.check {
+  align-self: start; padding-top: 21px; min-height: 55px;
+}
 input[type=text], input[type=number], input[type=url], select, textarea {
   font: 11px var(--sans); color: var(--ink); background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--r); padding: 0 9px; height: 34px; width: 100%; min-width: 0;
@@ -391,6 +412,9 @@ svg.pulses rect { fill: var(--ink); }
   border: 1px solid var(--line); border-radius: 999px; white-space: nowrap;
 }
 .facts > span.id { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+/* A chip row used as the right half of a heading row carries no stack
+   margin, or it rides below the heading it sits beside. */
+.row > .facts { margin: 0; }
 .adapter-facts { margin: 0 0 2px; }
 .adapter-facts[title]:not([title=""]) { cursor: help; }
 

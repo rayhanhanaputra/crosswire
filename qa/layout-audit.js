@@ -34,9 +34,68 @@ const WIDTHS=[1440,1100,820];
          && cs.textOverflow!=='ellipsis' && !el.title)
         clipped.push({name, txt:(el.textContent||'').trim().slice(0,36)});
     }
-    const u=(arr,k)=>{const s=new Set(),o=[];for(const x of arr.sort((a,b)=>(b.s||0)-(a.s||0))){if(s.has(x[k]))continue;s.add(x[k]);o.push(x);}return o;};
+    // ---- misalignment: things that are not clipped or spilling, just crooked.
+    // Overflow checks never saw the Targets header, whose right-hand control
+    // pair wrapped onto a second line and left the heading 28px off centre.
+    const crooked=[], ragged=[], heads=[];
+    const vis=el=>el.offsetWidth||el.offsetHeight;
+    const mid=r=>r.top+r.height/2;
+
+    // 1. A .row lays its children on one line. If their vertical centres
+    //    disagree the row has wrapped, and nothing in it is level any more.
+    for (const row of sec.querySelectorAll('.row')) {
+      if(!vis(row)) continue;
+      const kids=[...row.children].filter(vis);
+      if(kids.length<2) continue;
+      const cs=kids.map(k=>mid(k.getBoundingClientRect()));
+      const spread=Math.max(...cs)-Math.min(...cs);
+      if(spread>3) crooked.push({spread:Math.round(spread),name:'.'+String(row.className).trim().split(/\\s+/).join('.'),
+                                 txt:(row.textContent||'').trim().replace(/\\s+/g,' ').slice(0,34)});
+    }
+
+    // 2. Controls sharing a row of a field grid share a centre line. A
+    //    checkbox has no label above it, so it floats up unless it is padded.
+    for (const grid of sec.querySelectorAll('.grid2, .run-opts')) {
+      if(!vis(grid)) continue;
+      const rows=[];
+      for (const cell of [...grid.children].filter(vis)) {
+        const t=cell.getBoundingClientRect().top;
+        let r=rows.find(r=>Math.abs(r.t-t)<8); if(!r){r={t,cells:[]};rows.push(r);} r.cells.push(cell);
+      }
+      for (const r of rows) {
+        const got=r.cells.map(c=>{const e=c.querySelector('input,select,textarea'); if(!e||!vis(e))return null;
+          const q=e.getBoundingClientRect();
+          // a textarea is taller on purpose: compare the band it starts in
+          return e.tagName==='TEXTAREA' ? q.top+17 : mid(q);}).filter(x=>x!=null);
+        if(got.length<2) continue;
+        const spread=Math.max(...got)-Math.min(...got);
+        if(spread>2) ragged.push({spread:Math.round(spread),name:'.'+String(grid.className).trim().split(/\\s+/).join('.'),
+                                  txt:(r.cells.map(c=>(c.textContent||'').trim().slice(0,14)).join(' / ')).slice(0,42)});
+      }
+    }
+
+    // 3. The two sides of a split open at the same height, so their heading
+    //    strips are one line across the page, not a step.
+    for (const split of sec.querySelectorAll('.split')) {
+      if(!vis(split)) continue;
+      if(getComputedStyle(split).gridTemplateColumns.split(' ').length<2) continue;
+      const tops=[...split.children].filter(vis).map(col=>{
+        const pane=col.classList.contains('pane')?col:col.querySelector('.pane');
+        // An empty-state pane centres its heading on purpose: it has no ruled
+        // strip to line up with, so it is not a step in the heading line.
+        if(!pane||pane.classList.contains('idle')) return null;
+        const hd=pane.querySelector('h2');
+        return hd&&vis(hd)?{top:Math.round(hd.getBoundingClientRect().top),txt:hd.textContent.trim().slice(0,22)}:null;
+      }).filter(Boolean);
+      if(tops.length<2) continue;
+      const spread=Math.max(...tops.map(x=>x.top))-Math.min(...tops.map(x=>x.top));
+      if(spread>1) heads.push({spread,txt:tops.map(x=>x.txt+'@'+x.top).join(' vs ')});
+    }
+
+    const u=(arr,k)=>{const s=new Set(),o=[];for(const x of arr.sort((a,b)=>(b.s||b.spread||0)-(a.s||a.spread||0))){if(s.has(x[k]))continue;s.add(x[k]);o.push(x);}return o;};
     return JSON.stringify({page: document.documentElement.scrollWidth-document.documentElement.clientWidth,
-                           spills:u(spills,'name').slice(0,5), clipped:u(clipped,'name').slice(0,4)});
+                           spills:u(spills,'name').slice(0,5), clipped:u(clipped,'name').slice(0,4),
+                           crooked:u(crooked,'name').slice(0,4), ragged:u(ragged,'txt').slice(0,4), heads:heads.slice(0,2)});
   })()`;
 
   let bad=0;
@@ -45,7 +104,19 @@ const WIDTHS=[1440,1100,820];
     for (const tab of TABS) {
       await ev(`location.hash='#${tab}'; true`);
       await new Promise(r=>setTimeout(r,250));
-      if (tab==='history') { await ev("(function(){const r=document.querySelector('#tab-history tr.click'); r&&r.click(); return true})()"); await new Promise(r=>setTimeout(r,900)); }
+      if (tab==='history') {
+        await ev("(function(){const r=document.querySelector('#tab-history tr.click'); r&&r.click(); return true})()");
+        await new Promise(r=>setTimeout(r,900));
+        // Expand a trial so the detail grid is audited too, not just the table.
+        await ev("(function(){const b=[...document.querySelectorAll('#tab-history button.link')].find(x=>x.textContent==='details'); b&&b.click(); return true})()");
+        await new Promise(r=>setTimeout(r,300));
+      }
+      // The Targets form hides most of its fields until a transport is picked
+      // and the two disclosures are opened, so audit it with everything shown.
+      if (tab==='targets') {
+        await ev("(function(){const o=document.querySelector('#sec-observer'),m=document.querySelector('#sec-mappers'); if(o)o.open=true; if(m)m.open=true; return true})()");
+        await new Promise(r=>setTimeout(r,250));
+      }
       const res=JSON.parse(await ev(probe(tab)));
       // A split whose tall side is the narrow one wastes the page: the run
       // list sat in 909px of nothing while the detail crammed into 479.
@@ -61,12 +132,16 @@ const WIDTHS=[1440,1100,820];
                         (!idle(kids[0]) && b.height>a.height*2 && b.width<a.width*0.6);
         return JSON.stringify(starved? {aw:Math.round(a.width),ah:Math.round(a.height),bw:Math.round(b.width),bh:Math.round(b.height)} : null);
       })()`));
-      const ok = !res.spills.length && !res.clipped.length && res.page<=1 && !prop;
+      const ok = !res.spills.length && !res.clipped.length && res.page<=1 && !prop
+                 && !res.crooked.length && !res.ragged.length && !res.heads.length;
       if(!ok) bad++;
       console.log(`${String(width).padEnd(5)} ${tab.padEnd(10)} ${ok?'ok':'ISSUES'}${res.page>1?'  pageScroll='+res.page:''}`);
       for(const s of res.spills)  console.log(`        spill +${String(s.s).padStart(4)}px ${s.name.slice(0,42).padEnd(44)} ${JSON.stringify(s.txt)}`);
       for(const c of res.clipped) console.log(`        clipped          ${c.name.slice(0,42).padEnd(44)} ${JSON.stringify(c.txt)}`);
       if(prop) console.log(`        starved column: the taller side is the narrower one (${prop.aw}x${prop.ah} vs ${prop.bw}x${prop.bh})`);
+      for(const c of res.crooked) console.log(`        wrapped row: children sit ${c.spread}px apart, so nothing in it is level  ${c.name.slice(0,30).padEnd(32)} ${JSON.stringify(c.txt)}`);
+      for(const r of res.ragged)  console.log(`        ragged field row: controls off one centre line by ${r.spread}px  ${r.name.slice(0,22).padEnd(24)} ${JSON.stringify(r.txt)}`);
+      for(const hd of res.heads)  console.log(`        split headings step by ${hd.spread}px instead of opening level: ${hd.txt}`);
     }
   }
   console.log(bad? `\n${bad} page/width combinations have issues` : '\nall pages clean at all widths');

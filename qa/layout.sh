@@ -32,9 +32,28 @@ cleanup() { for p in $KIDS; do kill $p 2>/dev/null; done }
 trap cleanup EXIT INT TERM
 
 rm -rf $QA/layout-data
+# Another server already on 7117 would answer every request and the audit
+# would silently grade the wrong build — which is how a broken UI once passed.
+# Refuse to start rather than report on something we did not build.
+if lsof -ti :7117 >/dev/null 2>&1; then
+  print "FATAL: something is already serving 127.0.0.1:7117."
+  print "Stop it first, or the audit will test that server instead of this build."
+  exit 2
+fi
+if lsof -ti :9333 >/dev/null 2>&1; then
+  print "FATAL: something is already on 127.0.0.1:9333 (the browser's debug port)."
+  exit 2
+fi
+
 $ROOT/crosswire serve --listen 127.0.0.1:7117 --data $QA/layout-data > $QA/layout-serve.log 2>&1 &
-KIDS+=($!)
+SERVE_PID=$!
+KIDS+=($SERVE_PID)
 for i in {1..40}; do curl -sf http://127.0.0.1:7117/api/health >/dev/null && break; sleep 0.3; done
+if ! kill -0 $SERVE_PID 2>/dev/null; then
+  print "FATAL: the workbench exited during startup."; cat $QA/layout-serve.log; exit 2
+fi
+curl -sf http://127.0.0.1:7117/api/health >/dev/null || {
+  print "FATAL: the workbench never answered."; cat $QA/layout-serve.log; exit 2 }
 
 "$CHROME" --headless --disable-gpu --no-sandbox --hide-scrollbars --window-size=1440,900 \
   --remote-debugging-port=9333 --user-data-dir=$QA/layout-profile \
