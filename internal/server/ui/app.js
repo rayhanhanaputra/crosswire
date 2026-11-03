@@ -75,6 +75,8 @@ function uiConfirm(message, { title = 'Confirm', confirmLabel = 'Confirm', dange
 const pct = (x) => (x * 100).toFixed(0) + '%';
 const fmtTime = (s) => (s ? new Date(s).toLocaleString() : '');
 const fmtShort = (s) => (s ? new Date(s).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
+// "3808 ms" is noise; a reader wants the order of magnitude.
+const fmtDur = (ms) => (!ms ? null : ms < 1000 ? `${ms} ms` : ms < 60000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.round(ms / 60000)} min`);
 const shortID = (s) => (s || '').replace(/^cmp-/, '');
 const OUTCOME = { confirmed: 'Confirmed', observed: 'Observed', not_observed: 'Not observed', invalid: 'Invalid', error: 'Error' };
 
@@ -500,7 +502,7 @@ function artifactInfo(a) {
   return h('dl', { class: 'kv' },
     h('dt', {}, 'kind'), h('dd', {}, a.kind),
     h('dt', {}, 'summary'), h('dd', {}, a.summary),
-    h('dt', {}, 'sha256'), h('dd', { class: 'mono' }, a.sha256),
+    h('dt', {}, 'sha256'), h('dd', { class: 'mono hash', title: a.sha256 }, a.sha256),
     a.decoded ? [h('dt', {}, 'round trip'), h('dd', { class: 'mono' }, a.decoded)] : null);
 }
 
@@ -522,9 +524,12 @@ function armRow(name, a) {
     row.append(h('span', { class: 'kn' }, `0/${a ? a.trials : 0}`), h('span', { class: 'ci' }, 'no trial reached the target'));
     return row;
   }
-  const attempted = a.attempted == null ? '' : ` · attempted ${a.attempted}`;
-  row.append(h('span', { class: 'kn', title: 'executed / trials that reached the target' }, `${a.hits}/${a.reached}`),
-    h('span', { class: 'ci' }, `[${a.lower.toFixed(2)}–${a.upper.toFixed(2)}]${attempted}`));
+  // attempted only tells you something when it differs from hits: that is a
+  // call the target's code refused.
+  const refused = a.attempted == null ? 0 : a.attempted - a.hits;
+  const attempted = refused > 0 ? ` · ${refused} refused` : '';
+  row.append(h('span', { class: 'kn', title: `${a.hits} executed of ${a.reached} trials that reached the target` }, `${a.hits}/${a.reached}`),
+    h('span', { class: 'ci', title: 'Wilson 95% interval on the hit rate' }, `[${a.lower.toFixed(2)}–${a.upper.toFixed(2)}]${attempted}`));
   const bar = h('div', { class: 'bar', role: 'img', 'aria-label': `${a.hits} of ${a.reached}, 95% interval ${pct(a.lower)} to ${pct(a.upper)}` },
     h('div', { class: 'span' }), h('div', { class: 'tick' }));
   bar.style.setProperty('--lo', a.lower);
@@ -532,9 +537,13 @@ function armRow(name, a) {
   bar.style.setProperty('--rate', a.rate);
   row.append(bar);
   if (name === 'injected') {
-    const weak = a.weak_hits ? `; ${a.weak_hits} weak (observer change, no nonce visible)` : '';
-    const dropped = a.mapper_dropped ? `; input mapper dropped the canary in ${a.mapper_dropped}` : '';
-    row.append(h('span', { class: 'extra' }, `hits = forbidden call executed or observer change with the trial's nonce; attempted = executed or refused; delivered ${a.delivered}/${a.reached}${weak}${dropped}; Wilson 95% interval on hits`));
+    const notes = [];
+    // Delivery is only worth saying when it was not complete: "the camera
+    // missed it" and "the model resisted" are different findings.
+    if (a.delivered !== a.reached) notes.push(`the canary reached the agent in ${a.delivered}/${a.reached}`);
+    if (a.weak_hits) notes.push(`${a.weak_hits} weak (observer changed, no nonce visible)`);
+    if (a.mapper_dropped) notes.push(`the input mapper dropped the canary in ${a.mapper_dropped}`);
+    if (notes.length) row.append(h('span', { class: 'extra' }, notes.join('; ')));
   } else if (name === 'control' && a.observer_changes) {
     row.append(h('span', { class: 'extra' }, `observed state changed in ${a.observer_changes} control trial${a.observer_changes === 1 ? '' : 's'}, which voids the run`));
   }
@@ -626,9 +635,21 @@ function trialDetail(t, runId) {
 function trialRow(t, runId) {
   const ex = t.exchange || {};
   const delivered = t.delivered == null ? '–' : t.delivered ? '✓' : '✗';
-  const findings = h('td', {});
+  const findings = h('td', { class: 'findings' });
+  // The same rule fires once per tool call, so a four-call trial printed the
+  // same sentence four times. Group identical findings and show the count.
+  const seen = new Map();
   for (const f of t.findings || []) {
-    findings.append(h('div', { class: f.hint ? 'hint-find' : '' }, f.hint ? h('span', { class: 'tag' }, f.blocked ? 'refused' : 'hint') : null, ' ', `${f.rule}: ${f.detail}${f.reason ? ` (${f.reason})` : ''}`));
+    const key = `${f.hint ? 1 : 0}|${f.blocked ? 1 : 0}|${f.rule}|${f.detail}|${f.reason || ''}`;
+    const prev = seen.get(key);
+    if (prev) { prev.n += 1; continue; }
+    seen.set(key, { f, n: 1 });
+  }
+  for (const { f, n } of seen.values()) {
+    findings.append(h('div', { class: f.hint ? 'hint-find' : '', title: f.reason || '' },
+      f.hint ? [h('span', { class: 'tag' }, f.blocked ? 'refused' : 'hint'), ' '] : null,
+      `${f.rule}: ${f.detail}`,
+      n > 1 ? h('span', { class: 'xn' }, ` ×${n}`) : null));
   }
   let response = ex.error ? `error: ${ex.error}` : ex.response_text || (ex.status ? `HTTP ${ex.status}` : '');
   if (t.trigger) response += `\n\ntrigger: ${t.trigger.error ? 'error: ' + t.trigger.error : t.trigger.response_text || ''}`;
@@ -678,14 +699,22 @@ function renderRun(el, run) {
       (run.trials || []).some((t) => t.exchange && (t.exchange.mapped_input || t.exchange.mapped_response)) ? h('span', { class: 'tag mapped', title: 'An LLM mapped some fields. Mapped fields are never evidence.' }, 'MAPPED FIELDS') : null,
       run.mode ? h('span', { class: 'tag' }, run.mode) : null,
       run.id ? h('a', { href: `/api/runs/${encodeURIComponent(run.id)}/bundle`, download: '' }, 'Download bundle') : null)));
-  el.append(h('p', { class: 'muted small mono' },
-    `${run.id || ''}  ${fmtTime(run.started_at)}  ${run.duration_ms || 0} ms  source ${ch.source || '?'}  repeats ${run.repeats}`));
-  const info = run.target_info;
-  if (info) {
-    const on = Object.entries(info.layers || {}).filter(([, v]) => v).map(([k]) => k).join(', ') || 'none';
-    el.append(h('p', { class: 'muted small mono' },
-      `policy ${info.policy || '?'}  model ${info.model || '?'}  temperature ${info.temperature ?? '?'}  layers ${on}  guardrail ${info.guardrail_placement || 'off'}`));
-  }
+  // The facts a reader scans for, as chips rather than a run-on mono line. The
+  // full run id and the rest stay one hover away.
+  const info = run.target_info || {};
+  const layers = Object.entries(info.layers || {}).filter(([, v]) => v).map(([k]) => k).join(' + ');
+  const facts = [
+    [fmtShort(run.started_at), fmtTime(run.started_at)],
+    [`${run.repeats} repeats`, 'repeats per arm'],
+    [fmtDur(run.duration_ms), 'how long the run took'],
+    [ch.source || null, 'channel source'],
+    [info.policy || null, 'target policy'],
+    [info.model || null, `model, temperature ${info.temperature ?? '?'}`],
+    [layers || (info.policy === 'hardened' ? 'no layers' : null), 'defence layers in force'],
+    [info.guardrail_placement ? `guardrail: ${info.guardrail_placement}` : null, 'where the classifier sits'],
+  ];
+  el.append(h('p', { class: 'facts' }, facts.filter(([v]) => v).map(([v, tip]) => h('span', { title: tip }, v)),
+    run.id ? h('span', { class: 'id', title: 'run id' }, run.id) : null));
   if (run.error) el.append(h('p', { class: 'err' }, run.error));
   el.append(h('div', { class: 'verdict' }, badge(run.verdict.outcome), h('p', { class: 'why' }, run.verdict.explanation || '')));
   if (ch.modeled) el.append(h('p', { class: 'muted small' }, 'Modeled channel: this run cannot support a reproduced claim.'));

@@ -1,4 +1,4 @@
-.PHONY: build test vet selftest qa check registry lint all all-qa serve bridge-sim dist clean
+.PHONY: build test vet selftest qa qa-layout check registry lint all all-qa serve bridge-sim dist clean
 
 BIN     ?= crosswire
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
@@ -23,6 +23,11 @@ selftest: build
 # against a deterministic fake model. No network, no key, no hardware.
 qa:
 	zsh qa/run.sh
+
+# Layout QA: walk every tab at three widths in a headless browser and fail on
+# anything that spills past its pane or is clipped beyond recovery.
+qa-layout:
+	zsh qa/layout.sh
 
 # Start the workbench on loopback.
 serve: build

@@ -47,6 +47,23 @@ classifier make.
 | F | Runs survive a server restart; an exported bundle's manifest hashes all verify; no event in the bundle belongs to another run. |
 | G | The kill switch cancels a run in flight. |
 
+## Layout QA
+
+```bash
+zsh qa/layout.sh
+```
+
+A separate pass over the UI itself. It walks every tab at 1440, 1100 and 820px
+in a headless browser and fails on two things a screenshot makes obvious but a
+unit test never sees:
+
+- an element painted past the right edge of its tab section (the grid row that
+  is wider than the pane holding it), and
+- text clipped with no ellipsis and no `title`, so the reader cannot recover it.
+
+Needs node and a Chrome or Chromium; set `CROSSWIRE_CHROME` if it is not in a
+standard location. It is not part of `make qa`, because it needs a browser.
+
 ## Reading a failure
 
 A `FAIL` line names the case and the mismatch. The per-case JSON is kept under

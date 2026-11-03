@@ -288,21 +288,20 @@ button.btn.small-btn { min-height: 26px; padding: 2px 10px; font-size: 12px; }
 .verdict .why { max-width: 82ch; text-wrap: pretty; }
 .arms { display: grid; gap: 7px; margin: 12px 0 6px; }
 .arm {
-  display: grid; grid-template-columns: 104px 64px 230px minmax(140px, 1fr);
-  gap: 12px; align-items: center;
+  display: grid; grid-template-columns: minmax(78px, max-content) max-content minmax(0, 1fr);
+  gap: 6px 12px; align-items: center; min-width: 0;
 }
 .arm > strong { font-weight: 650; font-size: 12.5px; }
 .arm .kn { font-family: var(--mono); font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .arm .ci { font-family: var(--mono); font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.arm .extra { grid-column: 2 / -1; color: var(--muted); font-size: 11.5px; margin-top: -3px; }
+.arm .ci { grid-column: 3; justify-self: start; }
+.arm .bar { grid-column: 1 / -1; }
+.arm .extra { grid-column: 1 / -1; color: var(--muted); font-size: 11px; line-height: 1.45; text-wrap: pretty; }
 .arm.injected > strong, .arm.injected .kn { color: var(--hit); }
 .arm.control > strong { color: var(--accent); }
-.arms .axis { display: grid; grid-template-columns: 104px 64px 230px minmax(140px, 1fr); gap: 12px; }
-.arms .axis .scale { grid-column: 4; display: flex; justify-content: space-between; font: 10.5px var(--mono); color: var(--muted); border-top: 1px solid var(--line-strong); padding-top: 2px; }
-@media (max-width: 640px) {
-  .arm, .arms .axis { grid-template-columns: 90px 56px minmax(0, 1fr); }
-  .arm .bar, .arms .axis .scale { grid-column: 1 / -1; }
-}
+.arms { gap: 14px; }
+.arms .axis { display: block; }
+.arms .axis .scale { display: flex; justify-content: space-between; font: 10.5px var(--mono); color: var(--muted); border-top: 1px solid var(--line-strong); padding-top: 2px; }
 .bar { position: relative; height: 12px; background: var(--sunken); border-radius: 2px; }
 /* quarter gridlines so every arm reads against the same scale */
 .bar { background-image: linear-gradient(90deg, transparent calc(25% - .5px), var(--line) calc(25% - .5px) calc(25% + .5px), transparent calc(25% + .5px) calc(50% - .5px), var(--line-strong) calc(50% - .5px) calc(50% + .5px), transparent calc(50% + .5px) calc(75% - .5px), var(--line) calc(75% - .5px) calc(75% + .5px), transparent calc(75% + .5px)); }
@@ -339,6 +338,9 @@ td.mode, th.mode { font-size: 11.5px; color: var(--muted); }
 td.adapter .nm { font-family: var(--mono); font-size: 11.5px; }
 td.adapter .tag { margin-left: 6px; vertical-align: 1px; }
 .hint-find { color: var(--muted); font-style: italic; }
+td.findings { min-width: 22ch; max-width: 34ch; font-size: 11.5px; }
+td.findings > div + div { margin-top: 3px; }
+.xn { color: var(--muted); font-variant-numeric: tabular-nums; }
 .hit-yes { font-weight: 700; color: var(--hit); }
 tr.t-injected td:first-child, tr.t-control td:first-child, tr.t-direct td:first-child,
 tr.t-benign_direct td:first-child, tr.t-utility td:first-child { font-weight: 600; white-space: nowrap; }
@@ -357,7 +359,18 @@ pre.json { margin: 0; padding: 9px 10px; background: var(--sunken); border: 1px 
 .media pre.doc { margin: 0 0 8px; padding: 9px 10px; background: oklch(0.995 0 0); color: oklch(0.2 0 0); border: 1px solid var(--line); border-radius: var(--r); max-height: 320px; overflow: auto; font: 12px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 svg.pulses { width: 100%; max-width: 640px; height: 28px; background: var(--sunken); border: 1px solid var(--line); border-radius: 2px; }
 svg.pulses rect { fill: var(--ink); }
-.kv { display: grid; grid-template-columns: max-content 1fr; gap: 3px 14px; font-size: 12px; }
+/* Run metadata as chips: scannable, wraps cleanly, no run-on mono line. */
+.facts { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 8px 0 4px; }
+.facts > span {
+  font: 11px var(--mono); color: var(--muted); padding: 1px 7px;
+  border: 1px solid var(--line); border-radius: 999px; white-space: nowrap;
+}
+.facts > span.id { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+
+/* A 64-char hash is for checking, not reading: show the head, keep the rest on hover. */
+.hash { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 3px 14px; font-size: 12px; }
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; overflow-wrap: anywhere; }
 progress { width: 160px; height: 8px; accent-color: var(--accent); }
