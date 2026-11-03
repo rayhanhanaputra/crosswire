@@ -46,7 +46,8 @@ func newUI(t *testing.T, e *env) *ui {
 	}
 	u := &ui{t: t, ctx: ctx, page: page}
 	u.wait(`document.querySelector('#tab-targets select') && document.querySelectorAll('#tab-repeater select option').length >= 0 && window.S === undefined || true`)
-	u.wait(`document.querySelector('#ver').textContent.startsWith('version')`)
+	// the header shows the bare version once /api/health has answered
+	u.wait(`document.querySelector('#ver').textContent.length > 0`)
 	return u
 }
 
@@ -170,8 +171,8 @@ func TestUISaveTargetsForEachTransportAndSeeThemInTheAPI(t *testing.T) {
 
 	newTarget("ui-ws")
 	setTransport("ws")
-	u.setLabelled(pane, "Endpoint (perception path)", "ws://127.0.0.1:9/agent")
-	u.setLabelled(pane, "Subprotocol", "agent.v1")
+	u.setLabelled(pane, "Perception endpoint", "ws://127.0.0.1:9/agent")
+	u.setLabelled(pane, "Subprotocol (optional)", "agent.v1")
 	save()
 	if x := get("ui-ws"); x.Transport != "ws" || x.WS.Subprotocol != "agent.v1" {
 		t.Errorf("ws: %+v", x)
@@ -179,7 +180,7 @@ func TestUISaveTargetsForEachTransportAndSeeThemInTheAPI(t *testing.T) {
 
 	newTarget("ui-tcp")
 	setTransport("tcp")
-	u.setLabelled(pane, "Endpoint (perception path)", "tcp://127.0.0.1:9000")
+	u.setLabelled(pane, "Perception endpoint", "tcp://127.0.0.1:9000")
 	u.setLabelled(pane, "Framing", "length")
 	u.setLabelled(pane, "Read the reply until", "idle")
 	u.setLabelled(pane, "Quiet time for idle (ms)", "250")
@@ -190,7 +191,7 @@ func TestUISaveTargetsForEachTransportAndSeeThemInTheAPI(t *testing.T) {
 
 	newTarget("ui-mqtt")
 	setTransport("mqtt")
-	u.setLabelled(pane, "Endpoint (perception path)", "mqtt://127.0.0.1:1883")
+	u.setLabelled(pane, "Perception endpoint", "mqtt://127.0.0.1:1883")
 	u.setLabelled(pane, "Publish topic", "agents/in")
 	u.setLabelled(pane, "Response topic", "agents/out")
 	u.setLabelled(pane, "QoS", "0")
@@ -203,7 +204,7 @@ func TestUISaveTargetsForEachTransportAndSeeThemInTheAPI(t *testing.T) {
 
 	newTarget("ui-bridge")
 	setTransport("bridge")
-	u.setLabelled(pane, "Endpoint (perception path)", "http://127.0.0.1:9910/action")
+	u.setLabelled(pane, "Perception endpoint", "http://127.0.0.1:9910/action")
 	u.eval(`[...document.querySelectorAll('#tab-targets button')].find(function(b){return b.textContent==='Fill defaults for this kind'}).click(); true`)
 	save()
 	x := get("ui-bridge")
@@ -214,7 +215,7 @@ func TestUISaveTargetsForEachTransportAndSeeThemInTheAPI(t *testing.T) {
 
 	newTarget("ui-observer")
 	setTransport("http")
-	u.setLabelled(pane, "Endpoint (perception path)", "http://127.0.0.1:9/perceive")
+	u.setLabelled(pane, "Perception endpoint", "http://127.0.0.1:9/perceive")
 	u.click(`#sec-observer summary`)
 	u.setLabelled(pane, "Observer", "browser")
 	u.setLabelled(pane, "State URL or page URL", "http://127.0.0.1:9/")
@@ -240,7 +241,7 @@ func TestUISaveTargetsForEachTransportAndSeeThemInTheAPI(t *testing.T) {
 	// A bad value comes back as an error under the form, not as a dialog.
 	newTarget("ui-bad")
 	setTransport("ws")
-	u.setLabelled(pane, "Endpoint (perception path)", "http://127.0.0.1:9/x")
+	u.setLabelled(pane, "Perception endpoint", "http://127.0.0.1:9/x")
 	u.eval(`[...document.querySelectorAll('#tab-targets button')].find(function(b){return b.textContent==='Save target'}).click(); true`)
 	u.wait(`document.querySelector('#tab-targets .err').textContent.includes('ws://')`)
 }
