@@ -6,6 +6,8 @@
 
 # Crosswire run artifacts and local data
 /out/
+# the integration suite's scratch directory, when QA= points it here
+/qa/.scratch/
 docs/results/target-logs/
 docs/results/*/workbench-db/
 docs/paper/crosswire-paper.html

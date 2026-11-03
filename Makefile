@@ -1,4 +1,4 @@
-.PHONY: build test vet selftest check registry lint all serve bridge-sim dist clean
+.PHONY: build test vet selftest qa check registry lint all all-qa serve bridge-sim dist clean
 
 BIN     ?= crosswire
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
@@ -18,6 +18,11 @@ vet:
 # One trial set through every connector, from the built binary.
 selftest: build
 	./$(BIN) selftest
+
+# Integration QA: drive the built binary end to end as separate processes,
+# against a deterministic fake model. No network, no key, no hardware.
+qa:
+	zsh qa/run.sh
 
 # Start the workbench on loopback.
 serve: build
@@ -42,6 +47,9 @@ lint:
 
 # Everything CI runs.
 all: vet test check lint
+
+# Everything CI runs, plus the integration suite.
+all-qa: all qa
 
 # Release binaries for the three platforms the README promises.
 dist: clean

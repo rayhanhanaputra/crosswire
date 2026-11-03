@@ -156,6 +156,7 @@ review that supersedes the earlier placement claims is
 | [`docs/taxonomy.md`](docs/taxonomy.md) | the channel × intent taxonomy behind the knowledge base |
 | [`hardware/arduino/`](hardware/arduino/README.md) | the flashable LED rig firmware and wiring |
 | [`docs/guides/`](docs/guides/) | testing your own agent, and running every transport locally |
+| [`qa/`](qa/README.md) | the integration suite that drives the built binary |
 | [`docs/cfp/`](docs/cfp/), [`docs/deck/`](docs/deck/) | conference submissions and the talk deck |
 
 ## Knowledge base
@@ -185,6 +186,7 @@ target to evaluate against; use the Crosswire reference targets for any measured
 ```bash
 make all          # go vet + go test + registry check + markdownlint
 make selftest     # one trial set through every transport, from the binary
+make qa           # integration suite: the built binary driven end to end
 ```
 
 `go test ./...` runs every transport end to end against in-process fakes: a WebSocket
@@ -192,11 +194,19 @@ agent, a TCP agent, an MQTT broker with an agent behind it, a realtime voice ser
 a device bridge, and a state page for the observers. No network, no hardware. Browser
 checks run when Chrome or Chromium is installed and skip otherwise.
 
+`make qa` ([`qa/`](qa/README.md)) goes a layer out: it starts the workbench, the
+reference targets and a device bridge as **separate processes** against a
+deterministic fake model, then drives them over the HTTP API and asserts on the
+verdicts — the hardened layers, two-phase trials, evidence attribution across
+concurrent runs, bundle hashes, the safeguards and the kill switch. Still no network,
+no key and no hardware.
+
 ## Repository map
 
 ```text
 cmd/crosswire     entry point: serve | target | bridge | selftest | version
 internal/         the binary: channels, transports, engine, evidence, sink, targets, UI
+qa/               integration suite: the built binary driven end to end
 hardware/arduino  flashable LED rig firmware
 kb/               attack knowledge base, run bundles under kb/bundles/
 registry/         generated from kb/ front matter

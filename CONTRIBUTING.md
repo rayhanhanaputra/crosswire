@@ -18,6 +18,7 @@ JavaScript under `internal/server/ui/`, embedded with `go:embed`.
 go build -o crosswire ./cmd/crosswire
 go test ./...          # every transport against in-process fakes, offline
 ./crosswire selftest   # the same fakes from the binary, as a table
+make qa                # integration suite: the built binary driven end to end
 make check             # validate kb/ against registry/
 make lint              # markdownlint, the version CI uses
 ```
@@ -29,6 +30,9 @@ make lint              # markdownlint, the version CI uses
   target. Keep it channel-agnostic; do not couple a transport to one scenario.
 - Every transport needs a fake under `internal/fakes/` and a row in
   `internal/selftest/`, so `go test ./...` and `crosswire selftest` stay offline.
+- A change to the engine, the layers or the evidence rules should also be visible
+  from outside the process: add or extend a case in [`qa/`](qa/README.md), which
+  drives the built binary over the HTTP API.
 - **Evidence rules** live in `internal/evidence/`. A hit is a forbidden tool that
   executed at the sink carrying the trial's canary. Reply text is a hint, never
   evidence. Changes here need a test that covers the control arm.
