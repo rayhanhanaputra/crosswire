@@ -81,9 +81,9 @@ const WIDTHS=[1440,1100,820];
       if(getComputedStyle(split).gridTemplateColumns.split(' ').length<2) continue;
       const tops=[...split.children].filter(vis).map(col=>{
         const pane=col.classList.contains('pane')?col:col.querySelector('.pane');
-        // An empty-state pane centres its heading on purpose: it has no ruled
-        // strip to line up with, so it is not a step in the heading line.
-        if(!pane||pane.classList.contains('idle')) return null;
+        if(!pane) return null;
+        // Every pane opens on a ruled strip, empty ones included, so every
+        // strip on the page is one line across or it is a step.
         const hd=pane.querySelector('h2');
         return hd&&vis(hd)?{top:Math.round(hd.getBoundingClientRect().top),txt:hd.textContent.trim().slice(0,22)}:null;
       }).filter(Boolean);
@@ -92,10 +92,42 @@ const WIDTHS=[1440,1100,820];
       if(spread>1) heads.push({spread,txt:tops.map(x=>x.txt+'@'+x.top).join(' vs ')});
     }
 
+    // 4. The shell is the original's: edge-to-edge columns divided by one
+    //    hairline, panes with no frame of their own. None of the checks above
+    //    can see a pane that floats again — a rounded card on the grey field
+    //    is perfectly aligned and perfectly clipped-proof. Measure the model.
+    const floats=[];
+    for (const pane of sec.querySelectorAll('.pane')) {
+      if(!vis(pane)) continue;
+      const cs=getComputedStyle(pane);
+      const name='.'+String(pane.className).trim().split(/\s+/g).join('.');
+      if(cs.borderRadius!=='0px') floats.push({name,why:'radius '+cs.borderRadius});
+      if(cs.boxShadow!=='none')   floats.push({name,why:'shadow'});
+      // a frame is allowed only where a divider belongs: top rule on a stacked
+      // pane, left rule on a second column. A border on any other side is a card.
+      const sides=[['top',cs.borderTopWidth],['right',cs.borderRightWidth],['bottom',cs.borderBottomWidth],['left',cs.borderLeftWidth]].filter(([,w])=>w!=='0px');
+      if(sides.some(([side])=>!['top','left'].includes(side)))
+        floats.push({name,why:'border '+sides.map(x=>x[0]).join('+')});
+    }
+    // columns touch: no gutter of grey field between two panes of one split.
+    for (const split of sec.querySelectorAll('.split')) {
+      if(!vis(split)) continue;
+      if(getComputedStyle(split).columnGap!=='0px')
+        floats.push({name:'.split',why:'column-gap '+getComputedStyle(split).columnGap});
+      for (const col of [...split.children].filter(vis)) {
+        const panes=[...col.querySelectorAll(':scope > .pane')].filter(vis);
+        for(let i=1;i<panes.length;i++){
+          const gap=Math.round(panes[i].getBoundingClientRect().top-panes[i-1].getBoundingClientRect().bottom);
+          if(gap!==0) floats.push({name:'.split pane stack',why:gap+'px gap between stacked panes'});
+        }
+      }
+    }
+
     const u=(arr,k)=>{const s=new Set(),o=[];for(const x of arr.sort((a,b)=>(b.s||b.spread||0)-(a.s||a.spread||0))){if(s.has(x[k]))continue;s.add(x[k]);o.push(x);}return o;};
     return JSON.stringify({page: document.documentElement.scrollWidth-document.documentElement.clientWidth,
                            spills:u(spills,'name').slice(0,5), clipped:u(clipped,'name').slice(0,4),
-                           crooked:u(crooked,'name').slice(0,4), ragged:u(ragged,'txt').slice(0,4), heads:heads.slice(0,2)});
+                           crooked:u(crooked,'name').slice(0,4), ragged:u(ragged,'txt').slice(0,4), heads:heads.slice(0,2),
+                           floats:u(floats,'name').slice(0,4)});
   })()`;
 
   let bad=0;
@@ -133,7 +165,8 @@ const WIDTHS=[1440,1100,820];
         return JSON.stringify(starved? {aw:Math.round(a.width),ah:Math.round(a.height),bw:Math.round(b.width),bh:Math.round(b.height)} : null);
       })()`));
       const ok = !res.spills.length && !res.clipped.length && res.page<=1 && !prop
-                 && !res.crooked.length && !res.ragged.length && !res.heads.length;
+                 && !res.crooked.length && !res.ragged.length && !res.heads.length
+                 && !res.floats.length;
       if(!ok) bad++;
       console.log(`${String(width).padEnd(5)} ${tab.padEnd(10)} ${ok?'ok':'ISSUES'}${res.page>1?'  pageScroll='+res.page:''}`);
       for(const s of res.spills)  console.log(`        spill +${String(s.s).padStart(4)}px ${s.name.slice(0,42).padEnd(44)} ${JSON.stringify(s.txt)}`);
@@ -142,6 +175,7 @@ const WIDTHS=[1440,1100,820];
       for(const c of res.crooked) console.log(`        wrapped row: children sit ${c.spread}px apart, so nothing in it is level  ${c.name.slice(0,30).padEnd(32)} ${JSON.stringify(c.txt)}`);
       for(const r of res.ragged)  console.log(`        ragged field row: controls off one centre line by ${r.spread}px  ${r.name.slice(0,22).padEnd(24)} ${JSON.stringify(r.txt)}`);
       for(const hd of res.heads)  console.log(`        split headings step by ${hd.spread}px instead of opening level: ${hd.txt}`);
+      for(const f of res.floats)  console.log(`        floating card: ${f.why.padEnd(30)} ${f.name}`);
     }
   }
   console.log(bad? `\n${bad} page/width combinations have issues` : '\nall pages clean at all widths');

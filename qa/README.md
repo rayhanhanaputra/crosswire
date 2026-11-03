@@ -70,7 +70,12 @@ unit test never sees:
 - a **ragged field row**: controls on one row of a field grid that do not share
   a centre line — a checkbox has no label above it, so it floats up unless the
   row is reserved for it, and
-- a **heading step**: the two sides of a split opening at different heights.
+- a **heading step**: the two sides of a split opening at different heights, and
+- a **floating card**: a pane that grows a border, a radius, a shadow or a
+  gutter of grey field around it again. The shell is the original's —
+  edge-to-edge columns divided by one hairline — and none of the checks above
+  can see that model come apart, because a rounded card is perfectly aligned
+  and perfectly readable.
 
 The suite refuses to start when something already holds port 7117 or 9333.
 Without that it will happily drive the browser against a server it did not

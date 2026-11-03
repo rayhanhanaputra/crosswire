@@ -2,6 +2,45 @@
    Palette and card geometry carried over from the original web workbench:
    warm neutrals, a vermilion primary, flat cards on a soft grey field. Colour
    still earns its place — vermilion marks an executed hit and nothing else. */
+/* The old workbench set Geist and Geist Mono (next/font). The binary has no
+   network and no bundler, so the same variable fonts ship inside it: one
+   woff2 per subset, weights 100–900, no CDN, no FOUT, no licence surprise —
+   Geist is OFL-1.1, the licence text sits beside the files. The unicode-range
+   values are the subsets' own cmaps, so latin-ext loads only when a page
+   actually shows one of its characters. */
+@font-face {
+  font-family: Geist;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: block;
+  src: url("fonts/geist-latin.woff2") format("woff2");
+  unicode-range: U+0020-007E, U+00A0-00AC, U+00AE-00FF, U+0102, U+0131, U+0152-0153, U+02BC, U+02C6, U+02DA, U+02DC, U+0300-0301, U+0303-0304, U+0308, U+2013-2014, U+2018-201A, U+201C-201E, U+2022, U+2026, U+2032-2033, U+2039-203A, U+2044, U+20AC, U+2122, U+2191, U+2193, U+2212;
+}
+@font-face {
+  font-family: Geist;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: block;
+  src: url("fonts/geist-latin-ext.woff2") format("woff2");
+  unicode-range: U+0020, U+0041, U+00A0, U+00C1, U+0100-0113, U+0116-012B, U+012E-0130, U+0132-0137, U+0139-013E, U+0141-0148, U+014A-014D, U+0150-0151, U+0154-017E, U+018F, U+0192, U+01CD-01CE, U+01E4-01E9, U+0218-021B, U+0237, U+0259, U+02B9, U+02BC, U+02C7-02C8, U+02DD, U+0300-0301, U+0303-0304, U+0308, U+1E20-1E21, U+1E80-1E85, U+1E9E, U+1EF2-1EF3, U+1EF8-1EF9, U+2020, U+20AA, U+20B4, U+20B9, U+20BD, U+A78B-A78C;
+}
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: block;
+  src: url("fonts/geist-mono-latin.woff2") format("woff2");
+  unicode-range: U+0020-007E, U+00A0-00AC, U+00AE-00FF, U+0102, U+0131, U+0152-0153, U+02BC, U+02C6, U+02DA, U+02DC, U+0300-0301, U+0303-0304, U+0308, U+2013-2014, U+2018-201A, U+201C-201E, U+2022, U+2026, U+2032-2033, U+2039-203A, U+2044, U+20AC, U+2122, U+2191, U+2193, U+2212;
+}
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: block;
+  src: url("fonts/geist-mono-latin-ext.woff2") format("woff2");
+  unicode-range: U+0020, U+0041, U+00A0, U+00C1, U+0100-0113, U+0116-012B, U+012E-0130, U+0134-0137, U+0139-013E, U+0141-0148, U+014A-014D, U+0150-0151, U+0154-017E, U+018F, U+0192, U+01CD-01CE, U+01E4-01E9, U+0218-021B, U+0237, U+0259, U+02B9, U+02BC, U+02C7-02C8, U+02DD, U+0300-0301, U+0303-0304, U+0308, U+1E20-1E21, U+1E80-1E85, U+1E9E, U+1EF2-1EF3, U+1EF8-1EF9, U+2020, U+20AA, U+20B4, U+20B9, U+20BD, U+A78B-A78C;
+}
+
 :root {
   color-scheme: light;
   --bg: #f3f4f5;
@@ -25,8 +64,8 @@
   --st-none-fg: #696d76;       --st-none-bg: #f5f6f7;
   --st-invalid-fg: #6c4ea8;    --st-invalid-bg: #f3effb;
   --st-error-fg: #ffffff;      --st-error-bg: #b83737;
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
-  --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+  --sans: Geist, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --r: 4px;
   --r-lg: 6px;
   --shadow: none;
@@ -94,28 +133,28 @@ body {
 ::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
 h1, h2, h3, p { margin: 0; }
-h2 { font-size: 12px; font-weight: 650; text-wrap: balance; }
-h3 { font-size: 11px; font-weight: 650; color: var(--muted); margin: 14px 0 5px; }
+h2 { font-size: 12px; font-weight: 650; text-wrap: balance; letter-spacing: -0.1px; }
+h3 { font-size: 11px; font-weight: 650; color: var(--muted); margin: 15px 0 6px; letter-spacing: 0.01em; }
 a { color: var(--accent); text-underline-offset: 2px; }
 svg { flex: none; }
 
 /* ---------- header ---------- */
 .top {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  min-height: 52px; padding: 7px 18px; background: var(--surface);
-  border-bottom: 1px solid var(--line-soft); flex-wrap: wrap;
+  min-height: 58px; padding: 7px 22px; background: var(--surface);
+  border-bottom: 1px solid var(--line); flex-wrap: wrap;
 }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .brand .mark {
-  display: grid; place-items: center; width: 29px; height: 29px; flex: none;
-  border: 1px solid color-mix(in srgb, var(--hit) 30%, var(--line));
-  border-radius: var(--r-lg); background: var(--chrome); box-shadow: var(--shadow);
+  display: grid; place-items: center; width: 32px; height: 32px; flex: none;
+  border: 1px solid color-mix(in srgb, var(--hit) 38%, var(--line));
+  border-radius: 7px; background: var(--chrome); box-shadow: var(--shadow);
 }
-.brand .mark svg { width: 19px; height: 19px; }
+.brand .mark svg { width: 20px; height: 20px; }
 .brand svg .w1 { stroke: var(--ink); }
 .brand svg .w2 { stroke: var(--hit); }
-.brand h1 { font-size: 14.5px; font-weight: 700; letter-spacing: -0.015em; }
-.brand .sep { width: 1px; height: 17px; background: var(--line); flex: none; }
+.brand h1 { font-size: 14px; font-weight: 750; letter-spacing: -0.55px; }
+.brand .sep { width: 1px; height: 19px; background: var(--line); flex: none; }
 .tagline { color: var(--muted); font-size: 12px; }
 .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; min-width: 0; max-width: 100%; }
 .meta span:not(:empty) {
@@ -126,7 +165,7 @@ svg { flex: none; }
 
 /* icon-only header buttons */
 button.icon {
-  display: grid; place-items: center; width: 28px; height: 28px; padding: 0; flex: none;
+  display: grid; place-items: center; width: 29px; height: 29px; padding: 0; flex: none;
   border: 1px solid var(--line); border-radius: var(--r); background: var(--surface);
   color: var(--muted); cursor: pointer; transition: color .12s ease-out, background-color .12s ease-out;
 }
@@ -143,13 +182,13 @@ button.icon svg { width: 15px; height: 15px; }
 
 /* ---------- tabs ---------- */
 .tabs {
-  display: flex; gap: 24px; padding: 0 18px; background: var(--surface);
+  display: flex; gap: 25px; padding: 0 22px; background: var(--surface);
   border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: thin;
 }
 .tabs button {
   display: flex; align-items: center; gap: 7px;
   background: none; border: 0; box-shadow: inset 0 -2px transparent; padding: 0 1px;
-  min-height: 42px; font: inherit; font-size: 12.5px; font-weight: 550; color: var(--muted);
+  min-height: 44px; font: inherit; font-size: 12px; font-weight: 550; color: var(--muted);
   cursor: pointer; white-space: nowrap; transition: color .12s ease-out;
 }
 .tabs button svg { width: 14px; height: 14px; }
@@ -157,15 +196,31 @@ button.icon svg { width: 15px; height: 15px; }
 .tabs button[aria-selected="true"] { color: var(--ink); box-shadow: inset 0 -2px var(--accent); }
 
 main { overflow: auto; min-height: 0; }
-main > section { padding: 14px 18px 22px; }
+/* The workspace fills the viewport. A tab is one surface divided by hairlines,
+   the way the original workbench had it: no card floats on the field, and no
+   grey gutter shows between panels. The field colour still shows through the
+   page behind a short tab and under a dialog. */
+main > section {
+  min-height: 100%; padding: 0; background: var(--surface);
+  display: flex; flex-direction: column; min-width: 0;
+}
+main > section[hidden] { display: none; }
+/* A tab whose whole body is one pane (Sink) fills the height like a column. */
+main > section > .pane { flex: 1 1 auto; }
+/* The status bar: small muted text on the baseline of the window. */
 footer {
-  display: flex; align-items: center; min-height: 26px;
-  padding: 4px 18px; border-top: 1px solid var(--line); color: var(--muted);
-  font-size: 11px; background: var(--chrome);
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  min-height: 31px; padding: 6px 22px; border-top: 1px solid var(--line);
+  color: var(--muted); font-size: 10px; background: var(--chrome);
 }
 
 /* ---------- layout ---------- */
-.split { display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); gap: 16px; align-items: start; }
+/* Columns, not cards: zero gap, stretched to the same height, and the only
+   thing between them is the original's `border-right: 1px solid var(--border)`. */
+.split { display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); gap: 0; align-items: stretch; flex: 1; min-height: 0; }
+.split > * { min-width: 0; }
+/* A column that stacks several panes. */
+.split > div { display: flex; flex-direction: column; min-width: 0; }
 .split.wide-left { grid-template-columns: minmax(340px, 480px) minmax(0, 1fr); }
 /* History: the run list is a picker of one row each; the detail holds the
    verdict, the arms, the artifact and the trial table, so it takes the room. */
@@ -173,9 +228,9 @@ footer {
 @media (max-width: 1000px) { .split.hist { grid-template-columns: minmax(0, 1fr); } }
 
 /* Each run reads as a card: verdict and time, what was run, then the two arms. */
-.runlist .tablewrap { border: 0; border-radius: 0; margin: 0 -15px -13px; background: none; }
+.runlist .tablewrap { background: none; }
 .runlist table { font-size: inherit; }
-.runlist td { padding: 9px 15px; border-bottom: 1px solid var(--line-soft); }
+.runlist td { padding: 10px 15px; border-bottom: 1px solid var(--line-soft); }
 .runlist tr:last-child td { border-bottom: 0; }
 .r-top { display: flex; align-items: center; gap: 8px; }
 .r-when { color: var(--muted); font-size: 11.5px; margin-left: auto; white-space: nowrap; }
@@ -186,28 +241,36 @@ footer {
 .r-arms b { font-family: var(--mono); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); }
 .r-arms .r-mode { margin-left: auto; }
 @media (max-width: 900px) { .split, .split.wide-left { grid-template-columns: minmax(0, 1fr); } }
-/* A card: flat on the field, a ruled heading strip, 15px gutters. */
-.pane {
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
-  padding: 13px 15px; min-width: 0;
-}
-.pane + .pane { margin-top: 12px; }
-/* Panes stack with a 12px gap, but the two sides of a split are grid columns,
-   not a stack: the second must not be pushed below the first's heading. When
-   the split collapses to one column the grid's own 16px gap separates them. */
-.split > .pane + .pane { margin-top: 0; }
-/* The ruled heading strip. A pane's heading is its first child, or the first
-   child of a form filling the pane, so both reach the same 45px strip. */
+/* A pane: no border, no radius, no shadow — the original `.work-pane` was
+   `background: var(--card)` and nothing else. A ruled heading strip and 15px
+   gutters carry all the structure. */
+.pane { background: var(--surface); border: 0; border-radius: 0; padding: 13px 15px; min-width: 0; }
+/* Panes stacked in a column are divided by a rule, never by a gap. */
+/* The only thing between two columns is the original's single
+   `border-right: 1px solid var(--border)`. A pane used directly as a column —
+   Targets, History — matches the stack rule above too, so the column rule
+   names both classes and wins on specificity, not on source order. */
+.split > * + * { border-left: 1px solid var(--line); }
+.split > .pane + .pane { border-top: 0; }
+/* Stacked into one column, the divider turns with them. The turned rules name
+   the same compounds as the ones they override, or a pane column would keep
+   its left rule down the middle of the page. */
+@media (max-width: 1000px) { .split.hist > * + *, .split.hist > .pane + .pane { border-left: 0; border-top: 1px solid var(--line); } }
+@media (max-width: 900px) { .split > * + *, .split > .pane + .pane { border-left: 0; border-top: 1px solid var(--line); } }
+/* The ruled heading strip, as the original `.pane-heading`: 45px tall, a
+   15px gutter, a 12px/650 title and a hairline under it. A pane's heading is
+   its first child, or the first child of a form filling the pane, so both
+   reach the same strip. */
 .pane > h2:first-child,
 .pane > form:first-child > h2:first-child {
   display: flex; align-items: center; gap: 8px; min-height: 45px;
-  margin: -13px -15px 13px; padding: 0 15px;
+  margin: -13px -15px 13px; padding: 0 15px; background: var(--sunken);
   border-bottom: 1px solid var(--line-soft);
 }
 .pane > .row.spread:first-child,
 .pane > form:first-child > .row.spread:first-child {
   min-height: 45px; margin: -13px -15px 13px; padding: 0 15px;
-  border-bottom: 1px solid var(--line-soft); flex-wrap: nowrap;
+  background: var(--sunken); border-bottom: 1px solid var(--line-soft); flex-wrap: nowrap;
 }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .row.spread { justify-content: space-between; }
@@ -216,6 +279,10 @@ footer {
 .row.spread > .row { flex-wrap: nowrap; flex: 0 1 auto; min-width: 0; }
 .row.spread > .row > select { flex: 0 1 auto; min-width: 7ch; }
 .row.spread > .row > .btn { flex: none; }
+/* The strip's icon, as the original .pane-title svg: 14px, muted, leading the
+   title. Tabs already carry icons; the strips get the same voice. */
+.strip-ic { display: inline-flex; align-items: center; }
+.strip-ic svg { width: 14px; height: 14px; color: var(--muted); flex: none; }
 
 /* The run panel: options on one baseline, the action on its own line so the
    primary button is never crowded by a number field. */
@@ -230,22 +297,32 @@ footer {
 .mono { font-family: var(--mono); font-size: 12px; }
 .small { font-size: 11.5px; }
 
-/* Empty pane: what goes here and how to get it there. */
-.pane.idle {
-  box-shadow: none; background: var(--chrome); border-style: dashed; border-color: var(--line-strong);
-  padding: 22px 20px; display: grid; justify-items: center; text-align: center; gap: 6px;
+/* A pane that holds nothing yet. The original kept the heading strip and put
+   the empty state in the body below it — .empty-response, centred, 30px of
+   air, 11px/1.8 — so an empty pane still opens on the same rule as its
+   neighbours. `idle` only marks "the body is an empty state"; the strip above
+   it is the pane's, like any other. */
+.pane.idle { flex: 1 1 auto; }
+.idle-body {
+  flex: 1 1 auto; min-height: 200px; padding: 30px 20px;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center; gap: 7px;
 }
-.pane.idle::before {
-  content: ""; width: 42px; height: 42px; margin-bottom: 8px; border-radius: 10px;
-  border: 1px solid var(--line); background: var(--surface) center / 19px 19px no-repeat;
+.idle-body::before {
+  content: ""; width: 46px; height: 46px; margin-bottom: 10px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--chrome) center / 20px 20px no-repeat;
   /* a crossed-signal glyph, the same mark as the brand */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M3 6c6 0 12 12 18 12'/%3E%3Cpath d='M3 18c6 0 12-12 18-12'/%3E%3C/svg%3E");
 }
-.pane.idle > h2:first-child {
-  display: block; margin: 0; padding: 0; border: 0; min-height: 0; color: var(--ink); font-size: 13px;
+.idle-body h2 {
+  display: block; margin: 0; padding: 0; border: 0; min-height: 0;
+  color: var(--ink); font-size: 13px; font-weight: 550;
 }
-.pane.idle p { color: var(--muted); max-width: 58ch; text-wrap: pretty; font-size: 12px; line-height: 1.65; }
-.pane.idle ol { margin: 6px 0 0; padding-left: 18px; color: var(--muted); display: grid; gap: 2px; text-align: left; }
+.idle-body p { color: var(--muted); max-width: 46ch; text-wrap: pretty; font-size: 11px; line-height: 1.8; }
+.idle-body ol { margin: 6px 0 0; padding-left: 18px; color: var(--muted); display: grid; gap: 2px; text-align: left; }
+/* After .pane.idle, which zeroes every border on purpose for a centred empty
+   state: a stacked pane keeps its divider whether or not it is idle. */
+.pane + .pane { border-top: 1px solid var(--line-soft); }
 
 /* ---------- forms ---------- */
 /* Form fields follow the original workbench: a small quiet label above a
@@ -253,16 +330,19 @@ footer {
    title, so the grid keeps one rhythm. */
 label.f { display: flex; flex-direction: column; gap: 6px; font-size: 10px; color: var(--muted); min-width: 0; }
 label.f[title]:not([title=""]) { cursor: help; }
-label.f > .hint { font-size: 10px; line-height: 1.5; }
+label.f > .hint { font-size: 10px; line-height: 1.8; }
 label.check { display: inline-flex; gap: 8px; align-items: center; min-height: 34px; font-size: 12px; }
-/* A checkbox in a field grid has no label row of its own, so it floats up
-   against the labels of the fields beside it. Reserve that row — a 10px
-   label on a 1.5 line box is 15px, plus the 6px label-to-control gap — and
-   give the checkbox the same 34px control band underneath, so it centres on
-   exactly the line the inputs beside it sit on. */
-.grid2 > label.check {
-  align-self: start; padding-top: 21px; min-height: 55px;
-}
+/* A checkbox that qualifies a whole field grid sits under it on its own
+   fit-content line, the way the original workbench's .checkbox-row did.
+   Inside the grid it would need a label row reserved for it alone, and that
+   reserved row reads as an empty band whenever the grid wraps the checkbox
+   onto a line by itself at narrow widths. */
+form > label.check { display: flex; width: fit-content; min-height: 26px; margin: 2px 0 12px; }
+/* A checkbox that stays inside a field grid has no label row of its own, so
+   it sinks to the row's bottom: every field ends in a 34px control, and the
+   checkbox's own 34px band then lands on exactly the line the inputs sit on.
+   Top-aligning it would float it up against the labels beside it. */
+.grid2 > label.check { align-self: end; min-height: 34px; }
 input[type=text], input[type=number], input[type=url], select, textarea {
   font: 11px var(--sans); color: var(--ink); background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--r); padding: 0 9px; height: 34px; width: 100%; min-width: 0;
@@ -270,7 +350,7 @@ input[type=text], input[type=number], input[type=url], select, textarea {
 }
 input:hover, select:hover, textarea:hover { border-color: var(--line-strong); }
 input:focus-visible, select:focus-visible, textarea:focus-visible { outline-offset: 0; border-color: var(--accent); }
-textarea { font-family: var(--mono); font-size: 11px; resize: vertical; height: auto; min-height: 62px; padding: 8px 9px; line-height: 1.55; }
+textarea { font-family: var(--mono); font-size: 11px; resize: vertical; height: auto; min-height: 62px; padding: 9px; line-height: 1.8; }
 input[type=number] { width: 88px; font-variant-numeric: tabular-nums; }
 input[type=file] { font-size: 12px; }
 input:disabled, select:disabled { opacity: .6; }
@@ -290,21 +370,24 @@ button.btn:disabled { opacity: .55; cursor: default; }
 button.btn.small-btn { min-height: 26px; padding: 2px 10px; font-size: 12px; }
 
 /* ---------- lists ---------- */
-.list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); overflow: hidden; }
+/* A list filling a pane is the pane's body. The original's target and channel
+   lists were borderless, flush to the column edges, with one hairline between
+   rows — no box inside a box. */
+.list { list-style: none; margin: 0 -15px -13px; padding: 0; border: 0; border-radius: 0; background: var(--surface); overflow: hidden; }
 .list li + li { border-top: 1px solid var(--line-soft); }
 .list li.group {
-  padding: 8px 10px 4px; background: var(--sunken); font: 600 11px var(--sans);
+  padding: 8px 15px 5px; background: var(--sunken); font: 600 11px var(--sans);
   color: var(--muted); display: flex; justify-content: space-between; letter-spacing: 0.02em;
 }
 .list li.group .n { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 400; }
 .list button {
   display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 8px; text-align: left;
-  padding: 6px 10px 6px 14px; background: none; border: 0; font: inherit; color: var(--ink); cursor: pointer; min-height: 32px;
+  padding: 7px 15px; background: none; border: 0; font: inherit; color: var(--ink); cursor: pointer; min-height: 34px;
 }
 .list button .nm { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
 .list button:hover { background: var(--sunken); }
 .list button[aria-current="true"] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
-.empty { padding: 14px 10px; color: var(--muted); }
+.empty { padding: 14px 15px; color: var(--muted); font-size: 11px; line-height: 1.8; }
 .err { color: var(--danger); }
 
 /* ---------- tags and badges (text always carries the meaning) ---------- */
@@ -329,7 +412,7 @@ button.btn.small-btn { min-height: 26px; padding: 2px 10px; font-size: 12px; }
 
 /* ---------- the verdict strip ---------- */
 .verdict { display: grid; gap: 6px; padding: 10px 0 2px; justify-items: start; }
-.verdict .why { max-width: 82ch; text-wrap: pretty; }
+.verdict .why { max-width: 82ch; text-wrap: pretty; line-height: 1.8; }
 .arms { display: grid; gap: 7px; margin: 12px 0 6px; }
 .arm {
   display: grid; grid-template-columns: minmax(78px, max-content) max-content minmax(0, 1fr);
@@ -340,7 +423,7 @@ button.btn.small-btn { min-height: 26px; padding: 2px 10px; font-size: 12px; }
 .arm .ci { font-family: var(--mono); font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .arm .ci { grid-column: 3; justify-self: start; }
 .arm .bar { grid-column: 1 / -1; }
-.arm .extra { grid-column: 1 / -1; color: var(--muted); font-size: 11px; line-height: 1.45; text-wrap: pretty; }
+.arm .extra { grid-column: 1 / -1; color: var(--muted); font-size: 11px; line-height: 1.7; text-wrap: pretty; }
 .arm.injected > strong, .arm.injected .kn { color: var(--hit); }
 .arm.control > strong { color: var(--control); }
 .arms { gap: 14px; }
@@ -361,11 +444,14 @@ button.btn.small-btn { min-height: 26px; padding: 2px 10px; font-size: 12px; }
 .arm.control .bar .tick { background: var(--control); }
 
 /* ---------- tables ---------- */
-.tablewrap { container-type: inline-size; overflow: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
-.pane > .tablewrap:last-child { border: 0; border-radius: 0; margin: 0 -15px -13px; border-top: 1px solid var(--line-soft); }
+/* A table inside a pane is the pane's body: flush to the column edges, with
+   the heading strip's hairline above it and no second frame around it. */
+.tablewrap { container-type: inline-size; overflow: auto; border: 0; border-radius: 0; background: var(--surface); margin: 0 -15px -13px; }
+/* Only a table nested inside something that is already a box keeps a frame. */
+.dialog .tablewrap { border: 1px solid var(--line); border-radius: var(--r); margin: 0; }
 table { border-collapse: collapse; width: 100%; font-size: 12px; font-variant-numeric: tabular-nums; }
-th, td { padding: 5px 9px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line-soft); }
-th { position: sticky; top: 0; background: var(--sunken); color: var(--muted); font-weight: 600; font-size: 11px; letter-spacing: 0.02em; white-space: nowrap; z-index: 1; border-bottom-color: var(--line); }
+th, td { padding: 7px 15px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line-soft); }
+th { position: sticky; top: 0; background: var(--sunken); color: var(--muted); font-weight: 500; font-size: 11px; letter-spacing: 0.02em; white-space: nowrap; z-index: 1; border-bottom-color: var(--line); }
 tr:last-child td { border-bottom: 0; }
 tr.click { cursor: pointer; }
 tr.click:hover td { background: var(--sunken); }
@@ -398,11 +484,11 @@ tr.t-control td:first-child { color: var(--control); }
 .ev.blocked::before { content: "refused  "; font-weight: 650; }
 .ev.exec::before { content: "ran  "; font-weight: 650; color: var(--ink); }
 
-pre.json { margin: 0; padding: 9px 10px; background: var(--sunken); border: 1px solid var(--line); border-radius: var(--r); overflow: auto; max-height: 280px; font: 12px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+pre.json { margin: 0; padding: 10px 11px; background: var(--sunken); border: 1px solid var(--line); border-radius: var(--r); overflow: auto; max-height: 280px; font: 12px/1.9 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 /* Artifacts are shown on white because that is how they are rendered and sent. */
 .media img { max-width: 100%; max-height: 320px; image-rendering: pixelated; border: 1px solid var(--line); border-radius: 3px; background: #fff; }
 .media audio { width: 100%; max-width: 420px; }
-.media pre.doc { margin: 0 0 8px; padding: 9px 10px; background: #fff; color: #272a30; border: 1px solid var(--line); border-radius: var(--r); max-height: 320px; overflow: auto; font: 12px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.media pre.doc { margin: 0 0 8px; padding: 10px 11px; background: #fff; color: #272a30; border: 1px solid var(--line); border-radius: var(--r); max-height: 320px; overflow: auto; font: 12px/1.9 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 svg.pulses { width: 100%; max-width: 640px; height: 28px; background: var(--sunken); border: 1px solid var(--line); border-radius: 2px; }
 svg.pulses rect { fill: var(--ink); }
 /* Run metadata as chips: scannable, wraps cleanly, no run-on mono line. */
@@ -415,6 +501,16 @@ svg.pulses rect { fill: var(--ink); }
 /* A chip row used as the right half of a heading row carries no stack
    margin, or it rides below the heading it sits beside. */
 .row > .facts { margin: 0; }
+/* In a heading strip a chip is the original's `.pane-label`: square-ish, flat
+   on the sunken grey, 10px, never a pill floating in the rule. */
+.pane > .row.spread:first-child .facts > span,
+.pane > form:first-child > .row.spread:first-child .facts > span,
+.pane > .row.spread:first-child > .row > .tag,
+.pane > .row.spread:first-child .tag,
+.pane-chip {
+  padding: 1px 6px; border-radius: 3px; background: var(--sunken);
+  border: 1px solid var(--line-soft); font-size: 10px; color: var(--muted);
+}
 .adapter-facts { margin: 0 0 2px; }
 .adapter-facts[title]:not([title=""]) { cursor: help; }
 
@@ -432,7 +528,7 @@ progress { width: 160px; height: 8px; accent-color: var(--accent); }
 .toast.bad { background: var(--st-error-bg); color: var(--st-error-fg); }
 @keyframes in { from { opacity: 0; transform: translateY(4px); } }
 .overlay { position: fixed; inset: 0; background: rgb(39 42 48 / .5); display: grid; place-items: center; z-index: 40; padding: 12px; }
-.dialog { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 16px 18px; width: min(440px, 100%); display: grid; gap: 10px; box-shadow: 0 8px 28px rgb(0 0 0 / .18); }
+.dialog { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 16px 18px; width: min(440px, 100%); display: grid; gap: 10px; box-shadow: 0 8px 28px rgb(0 0 0 / .18); line-height: 1.7; }
 .dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
@@ -440,7 +536,7 @@ progress { width: 160px; height: 8px; accent-color: var(--accent); }
 .tgroup { display: grid; gap: 10px; margin-top: 10px; padding: 8px 0 2px 12px; border-left: 2px solid var(--line-strong); }
 .tgroup[hidden] { display: none; }
 .tgroup > h3 { margin: 0; }
-.tgroup .note { color: var(--muted); max-width: 72ch; text-wrap: pretty; }
+.tgroup .note { color: var(--muted); max-width: 72ch; text-wrap: pretty; font-size: 11px; line-height: 1.8; }
 details.disclosure { margin-top: 12px; border-top: 1px solid var(--line-soft); padding-top: 8px; }
 details.disclosure > summary { cursor: pointer; font-weight: 650; font-size: 12px; color: var(--muted); min-height: 28px; display: flex; align-items: center; gap: 8px; }
 details.disclosure > summary:hover { color: var(--ink); }
@@ -472,7 +568,7 @@ ol.timeline .ev-bad { color: var(--danger); font-weight: 650; }
 .shots figure { margin: 0; max-width: 240px; }
 .shots img { width: 100%; border: 1px solid var(--line); border-radius: 3px; background: #fff; }
 .shots figcaption { font-size: 11px; color: var(--muted); }
-pre.hex { margin: 0 0 8px; padding: 9px 10px; background: var(--sunken); border: 1px solid var(--line); border-radius: var(--r); max-height: 220px; overflow: auto; font: 11.5px/1.5 var(--mono); }
+pre.hex { margin: 0 0 8px; padding: 10px 11px; background: var(--sunken); border: 1px solid var(--line); border-radius: var(--r); max-height: 220px; overflow: auto; font: 11.5px/1.7 var(--mono); }
 button.link { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; min-height: 24px; }
 .audio-field { grid-column: 1 / -1; display: grid; gap: 6px; }
 .audio-field .lab { color: var(--muted); font-weight: 550; font-size: 12px; }

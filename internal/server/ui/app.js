@@ -6,6 +6,7 @@ function h(tag, attrs, ...kids) {
   for (const [k, v] of Object.entries(attrs || {})) {
     if (v === false || v == null) continue;
     if (k === 'class') el.className = v;
+    else if (k === 'innerHTML') el.innerHTML = v;   // trusted markup only: the strip icons below
     else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
     else if (k === 'value') el.value = v;
     else if (v === true) el.setAttribute(k, '');
@@ -20,6 +21,24 @@ function h(tag, attrs, ...kids) {
 const $ = (sel, root = document) => root.querySelector(sel);
 // A pane rendered into is no longer the empty-state outline.
 const clear = (el) => { el.replaceChildren(); el.classList.remove('idle'); return el; };
+// The strip icons are the tab icons, drawn once here so a pane's heading and
+// its tab speak with the same voice. Stroke inherits currentColor.
+const ICONS = {
+  targets: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="3.6"/><path d="M12 1.6v2.6M12 19.8v2.6M1.6 12h2.6M19.8 12h2.6"/></svg>',
+  repeater: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5h12.5l-2.6-2.6M21 16.5H8.5l2.6 2.6"/></svg>',
+  intruder: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 5.5h16M4 12h16M4 18.5h16"/><circle cx="8.5" cy="5.5" r="1.9" fill="currentColor" stroke="none"/><circle cx="14.5" cy="12" r="1.9" fill="currentColor" stroke="none"/><circle cx="10.5" cy="18.5" r="1.9" fill="currentColor" stroke="none"/></svg>',
+  history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 12a8.4 8.4 0 1 0 2.6-6.1L3 8.8"/><path d="M3 4.4v4.4h4.4M12 7.6V12l3.4 2"/></svg>',
+  sink: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v8.4M8.6 8.4 12 11.8l3.4-3.4"/><path d="M4 14.4c0 3.4 3.6 6.1 8 6.1s8-2.7 8-6.1"/></svg>',
+  run: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M8.2 5.6v12.8L19 12z"/></svg>',
+};
+// The ruled heading strip every pane opens on, as the original .pane-heading:
+// an icon, a title, and a chip on the right.
+const strip = (icon, title, right) => h('div', { class: 'row spread' },
+  h('h2', {}, icon ? h('span', { class: 'strip-ic', 'aria-hidden': 'true', innerHTML: icon }) : null, title),
+  right || null);
+// The empty state of a pane body: centred under the pane's own strip, the way
+// the original .empty-response sat inside its .work-pane.
+const idleBody = (title, ...desc) => h('div', { class: 'idle-body' }, h('h2', {}, title), ...desc.map((d) => h('p', {}, d)));
 
 async function api(method, path, body) {
   const opt = { method, headers: {} };
@@ -701,7 +720,7 @@ function renderRun(el, run) {
   const ch = run.channel || {};
   const a = ch.artifact;
   el.append(h('div', { class: 'row spread' },
-    h('h2', {}, `${run.target_name || run.target_id} / ${ch.adapter || '?'}`),
+    h('h2', {}, h('span', { class: 'strip-ic', 'aria-hidden': 'true', innerHTML: ICONS.history }), `${run.target_name || run.target_id} / ${ch.adapter || '?'}`),
     h('span', { class: 'row' },
       ch.modeled ? h('span', { class: 'tag modeled', title: 'No physical channel was used' }, 'MODELED') : null,
       (run.trials || []).some((t) => t.exchange && (t.exchange.mapped_input || t.exchange.mapped_response)) ? h('span', { class: 'tag mapped', title: 'An LLM mapped some fields. Mapped fields are never evidence.' }, 'MAPPED FIELDS') : null,
@@ -935,7 +954,8 @@ function initTargets() {
 
   const list = h('ul', { class: 'list' });
   const err = h('p', { class: 'err', role: 'alert' });
-  const title = h('h2', {}, 'New target');
+  const titleText = h('span', {}, 'New target');
+  const title = h('h2', {}, h('span', { class: 'strip-ic', 'aria-hidden': 'true', innerHTML: ICONS.targets }), titleText);
   const del = h('button', { class: 'btn danger', type: 'button', onclick: onDelete }, 'Delete');
   const prodNote = h('p', { class: 'note muted small', hidden: true },
     'Production targets need TLS (https, wss, mqtts, tcp with TLS) unless they are on this machine. Every run needs your acknowledgement and runs one trial at a time.');
@@ -1014,8 +1034,8 @@ function initTargets() {
       text('trigger_endpoint', 'Trigger endpoint (optional)', { placeholder: 'http://127.0.0.1:7206/chat', tip: 'Makes trials two-phase: deliver, then trigger.' }),
       text('trigger_template', 'Trigger template', { placeholder: '{"message":"Anything to handle?","session":"{{canary}}"}' }),
       text('method', 'Method', { placeholder: 'POST' }),
-      text('timeout_seconds', 'Timeout (seconds)', { placeholder: '30' }),
-      h('label', { class: 'check' }, F.enabled, 'Enabled')),
+      text('timeout_seconds', 'Timeout (seconds)', { placeholder: '30' })),
+    h('label', { class: 'check' }, F.enabled, 'Enabled'),
     prodNote,
     ...groups,
     h('h3', {}, 'Request'),
@@ -1035,8 +1055,8 @@ function initTargets() {
     h('div', { class: 'grid2' },
       text('forbidden_tools', 'Forbidden tools', { area: true, rows: 2, placeholder: 'one per line', tip: 'A hit needs a sink event for one of these.' }),
       text('argument_limits', 'Argument limits', { area: true, rows: 2, placeholder: 'transfer_funds.amount ≤ 100', tip: 'Over the limit is a hit, no canary needed.' }),
-      text('response_markers', 'Response markers', { area: true, rows: 2, placeholder: 'one per line', tip: 'Shown as hints. They never count as a hit.' }),
-      h('label', { class: 'check' }, F.require_canary, 'Require canary in tool arguments')),
+      text('response_markers', 'Response markers', { area: true, rows: 2, placeholder: 'one per line', tip: 'Shown as hints. They never count as a hit.' })),
+    h('label', { class: 'check' }, F.require_canary, 'Require canary in tool arguments'),
 
     h('details', { class: 'disclosure', id: 'sec-observer' },
       h('summary', {}, 'Observer: read the effect out of band'),
@@ -1084,7 +1104,7 @@ function initTargets() {
 
   root.append(h('div', { class: 'split' },
     h('div', { class: 'pane' },
-      h('div', { class: 'row spread' }, h('h2', {}, 'Targets'),
+      h('div', { class: 'row spread' }, h('h2', {}, h('span', { class: 'strip-ic', 'aria-hidden': 'true', innerHTML: ICONS.targets }), 'Targets'),
         h('button', { class: 'btn small-btn', type: 'button', title: 'Start a new target profile', onclick: () => fill(null) }, '+ New')),
       list),
     h('div', { class: 'pane' }, form)));
@@ -1115,7 +1135,7 @@ function initTargets() {
   function fill(t, asNew) {
     current = t && !asNew ? t.id : null;
     const x = t || { environment: 'staging', enabled: true, evidence: {} };
-    title.textContent = current ? `Edit ${x.name}` : 'New target';
+    titleText.textContent = current ? `Edit ${x.name}` : 'New target';
     del.hidden = !current;
     err.textContent = '';
     F.name.value = x.name || '';
@@ -1291,10 +1311,12 @@ function initRepeater() {
   const note = h('div', {});
   const attackBox = h('div', {});
   const controlBox = h('div', {});
-  const preview = h('div', { class: 'pane idle' }, h('h2', {}, 'Nothing previewed yet'),
-    h('p', {}, 'Pick a target and an adapter, write the payload with {{canary}} where the attacker\'s value goes, then Preview. You will see the rendered artifact, its hash and the exact request bodies. Nothing is sent.'));
-  const result = h('div', { class: 'pane idle' }, h('h2', {}, 'No trials run'),
-    h('p', {}, 'Send runs the injected arm, the benign control and, if ticked, the typed-in-chat arm, each with a fresh nonce per trial. The verdict and every trial appear here.'));
+  const preview = h('div', { class: 'pane idle' },
+    strip(ICONS.repeater, 'Preview'),
+    idleBody('Nothing previewed yet', 'Pick a target and an adapter, write the payload with {{canary}} where the attacker\'s value goes, then Preview. You will see the rendered artifact, its hash and the exact request bodies. Nothing is sent.'));
+  const result = h('div', { class: 'pane idle' },
+    strip(ICONS.repeater, 'Results'),
+    idleBody('No trials run', 'Send runs the injected arm, the benign control and, if ticked, the typed-in-chat arm, each with a fresh nonce per trial. The verdict and every trial appear here.'));
   const sendBtn = h('button', { class: 'btn primary', type: 'button' }, 'Send');
   const previewBtn = h('button', { class: 'btn', type: 'button' }, 'Preview');
   let attack, control, dirty = false;
@@ -1354,16 +1376,18 @@ function initRepeater() {
   root.append(h('div', { class: 'split wide-left' },
     h('div', {},
       h('div', { class: 'pane' },
+        strip(ICONS.repeater, 'Payload'),
         h('div', { class: 'grid2' }, h('label', { class: 'f' }, 'Target', target), h('label', { class: 'f' }, 'Adapter', adapter)),
         note,
         h('h3', {}, 'Payload fields'), attackBox),
       h('div', { class: 'pane' },
-        h('div', { class: 'row spread' }, h('h2', {}, 'Control fields'),
+        h('div', { class: 'row spread' }, h('h2', {}, h('span', { class: 'strip-ic', 'aria-hidden': 'true', innerHTML: ICONS.repeater }), 'Control fields'),
           h('span', { class: 'row' },
             h('label', { class: 'check', title: 'Benign text of similar length through the same channel. Without it a verdict cannot be confirmed.' }, useControl, 'Send control arm'),
             h('button', { class: 'btn', type: 'button', onclick: () => { dirty = false; syncControl(); } }, 'Match length'))),
         controlBox),
       h('div', { class: 'pane run' },
+        strip(ICONS.run, 'Run'),
         h('div', { class: 'run-opts' },
           h('label', { class: 'f' }, 'Repeats', repeats),
           h('label', { class: 'f' }, 'Concurrency', conc),
@@ -1410,12 +1434,13 @@ function initIntruder() {
   const useControl = h('input', { type: 'checkbox', checked: true });
   const repeats = h('input', { type: 'number', min: 1, max: 50, value: 5 });
   const conc = h('input', { type: 'number', min: 1, max: 4, value: 1 });
-  const payloads = h('textarea', { rows: 8, spellcheck: 'false', placeholder: 'One payload per line. Each becomes one run.\nInclude {{canary}} where the target should echo a nonce.' });
+  const payloads = h('textarea', { rows: 8, spellcheck: 'false', 'aria-label': 'Payloads, one per line', placeholder: 'One payload per line. Each becomes one run.\nInclude {{canary}} where the target should echo a nonce.' });
   const note = h('div', {});
   const tplBox = h('div', {});
   const controlBox = h('div', {});
-  const result = h('div', { class: 'pane idle' }, h('h2', {}, 'No campaign run'),
-    h('p', {}, 'Put one payload per line. Run campaign sends each one as its own run, with the control arm beside it, and lists one verdict per payload here. Open a row to see its trials in History.'));
+  const result = h('div', { class: 'pane idle' },
+    strip(ICONS.intruder, 'Results'),
+    idleBody('No campaign run', 'Put one payload per line. Run campaign sends each one as its own run, with the control arm beside it, and lists one verdict per payload here. Open a row to see its trials in History.'));
   const runBtn = h('button', { class: 'btn primary', type: 'button' }, 'Run campaign');
   let tpl, control, dirty = false;
 
@@ -1514,15 +1539,19 @@ function initIntruder() {
   root.append(h('div', { class: 'split wide-left' },
     h('div', {},
       h('div', { class: 'pane' },
+        strip(ICONS.intruder, 'Configuration'),
         h('div', { class: 'grid2' }, h('label', { class: 'f' }, 'Target', target), h('label', { class: 'f' }, 'Adapter', adapter)),
         note, h('h3', { title: 'Exactly one field holds {{payload}}.' }, 'Fields template'), tplBox),
-      h('div', { class: 'pane' }, h('label', { class: 'f' }, 'Payloads', payloads)),
       h('div', { class: 'pane' },
-        h('div', { class: 'row spread' }, h('h2', {}, 'Control fields'),
+        strip(ICONS.intruder, 'Payloads'),
+        payloads),
+      h('div', { class: 'pane' },
+        h('div', { class: 'row spread' }, h('h2', {}, h('span', { class: 'strip-ic', 'aria-hidden': 'true', innerHTML: ICONS.intruder }), 'Control fields'),
           h('span', { class: 'row' }, h('label', { class: 'check', title: 'Benign text of similar length through the same channel. Without it a verdict cannot be confirmed.' }, useControl, 'Send control arm'),
             h('button', { class: 'btn', type: 'button', onclick: () => { dirty = false; syncControl(); } }, 'Match length'))),
         controlBox),
       h('div', { class: 'pane run' },
+        strip(ICONS.run, 'Campaign'),
         h('div', { class: 'run-opts' },
           h('label', { class: 'f' }, 'Repeats per payload', repeats),
           h('label', { class: 'f' }, 'Concurrency', conc),
@@ -1544,9 +1573,11 @@ let openRun = () => {};
 function initHistory() {
   const root = $('#tab-history');
   const body = h('tbody', {});
-  const detail = h('div', { class: 'pane idle' }, h('h2', {}, 'No run selected'),
-    h('p', {}, 'Pick a run on the left to see its verdict, each arm on the same axis, the artifact and every trial with its sink events. Download bundle exports it for review.'));
+  const detail = h('div', { class: 'pane idle' },
+    strip(ICONS.history, 'Run detail'),
+    idleBody('No run selected', 'Pick a run on the left to see its verdict, each arm on the same axis, the artifact and every trial with its sink events. Download bundle exports it for review.'));
   const status = h('p', { class: 'muted' });
+  const runsChip = h('span', { class: 'pane-chip' }, '0 runs');
   let selected = null;
 
   async function load() {
@@ -1554,6 +1585,7 @@ function initHistory() {
     try {
       const runs = await api('GET', '/api/runs?limit=100');
       clear(body);
+      runsChip.textContent = `${runs.length} run${runs.length === 1 ? '' : 's'}`;
       status.textContent = runs.length ? '' : 'No runs yet. Send one from Repeater or Intruder.';
       for (const r of runs) {
         const inj = r.verdict.arms && r.verdict.arms.injected;
@@ -1582,7 +1614,7 @@ function initHistory() {
   async function select(id) {
     selected = id;
     for (const tr of body.children) tr.classList.toggle('sel', tr.dataset.id === id);
-    clear(detail).append(h('p', { class: 'muted' }, 'Loading...'));
+    clear(detail).append(strip(ICONS.history, 'Run detail'), h('p', { class: 'muted' }, 'Loading...'));
     try { renderRun(detail, await api('GET', `/api/runs/${encodeURIComponent(id)}`)); }
     catch (ex) { clear(detail).append(h('p', { class: 'err' }, ex.message)); }
   }
@@ -1591,8 +1623,8 @@ function initHistory() {
 
   root.append(h('div', { class: 'split hist' },
     h('div', { class: 'pane runlist' },
-      h('div', { class: 'row spread' }, h('h2', {}, 'Runs'),
-        h('button', { class: 'btn small-btn', type: 'button', onclick: load }, 'Refresh')),
+      h('div', { class: 'row spread' }, h('h2', {}, h('span', { class: 'strip-ic', 'aria-hidden': 'true', innerHTML: ICONS.history }), 'Runs'),
+        h('span', { class: 'row' }, runsChip, h('button', { class: 'btn small-btn', type: 'button', onclick: load }, 'Refresh'))),
       status,
       h('div', { class: 'tablewrap' }, h('table', {}, body))),
     detail));
@@ -1626,9 +1658,10 @@ function initSink() {
       if (S.health) url.textContent = S.health.sink_url;
     } catch (ex) { clear(status).append(h('span', { class: 'err' }, ex.message)); }
   };
-  root.append(h('div', { class: 'row spread' }, h('h2', {}, 'Sink events'), h('p', { class: 'facts', title: 'Targets POST every tool call, executed or refused, to this URL.' }, url)),
+  root.append(h('div', { class: 'pane' },
+    h('div', { class: 'row spread' }, h('h2', {}, h('span', { class: 'strip-ic', 'aria-hidden': 'true', innerHTML: ICONS.sink }), 'Sink events'), h('p', { class: 'facts', title: 'Targets POST every tool call, executed or refused, to this URL.' }, url)),
     status,
-    h('div', { class: 'tablewrap' }, h('table', {}, h('thead', {}, h('tr', {}, ['id', 'time', 'tool', 'result', 'target', 'session', 'arguments'].map((c) => h('th', {}, c)))), body)));
+    h('div', { class: 'tablewrap' }, h('table', {}, h('thead', {}, h('tr', {}, ['id', 'time', 'tool', 'result', 'target', 'session', 'arguments'].map((c) => h('th', {}, c)))), body))));
 }
 
 // ---------- theme ----------
