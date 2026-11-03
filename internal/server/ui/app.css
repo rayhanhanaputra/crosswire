@@ -164,6 +164,11 @@ footer {
 /* ---------- layout ---------- */
 .split { display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); gap: 16px; align-items: start; }
 .split.wide-left { grid-template-columns: minmax(340px, 480px) minmax(0, 1fr); }
+/* History: the run table has seven columns, so it takes the wide side and the
+   selected run's detail takes the rest. */
+/* The seven-column table needs real room before the detail pane gets any. */
+.split.runs { grid-template-columns: minmax(0, 1.9fr) minmax(300px, 1fr); }
+@media (max-width: 1250px) { .split.runs { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 900px) { .split, .split.wide-left { grid-template-columns: minmax(0, 1fr); } }
 .pane {
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
@@ -179,6 +184,15 @@ footer {
 .pane > .row.spread:first-child { margin: -4px 0 10px; padding-bottom: 9px; border-bottom: 1px solid var(--line-soft); }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .row.spread { justify-content: space-between; }
+
+/* The run panel: options on one baseline, the action on its own line so the
+   primary button is never crowded by a number field. */
+.pane.run { display: grid; gap: 12px; }
+.run-opts { display: flex; gap: 18px; align-items: end; flex-wrap: wrap; }
+/* A checkbox sits on the text baseline, so align it with the inputs beside it. */
+.run-opts label.check { min-height: 31px; }
+.run-go { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.run-go .btn { min-width: 92px; }
 .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 12px; }
 .muted { color: var(--muted); }
 .mono { font-family: var(--mono); font-size: 12px; }
@@ -228,6 +242,8 @@ button.btn.primary { background: var(--accent); color: var(--on-accent); border-
 button.btn.primary:hover { background: color-mix(in oklch, var(--accent) 86%, var(--ink)); }
 button.btn.danger { color: var(--danger); border-color: color-mix(in oklch, var(--danger) 45%, var(--line)); }
 button.btn:disabled { opacity: .55; cursor: default; }
+/* A header button beside an h2: smaller, so the heading stays the loudest thing. */
+button.btn.small-btn { min-height: 26px; padding: 2px 10px; font-size: 12px; }
 
 /* ---------- lists ---------- */
 .list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); overflow: hidden; }
@@ -303,6 +319,7 @@ button.btn:disabled { opacity: .55; cursor: default; }
 
 /* ---------- tables ---------- */
 .tablewrap { container-type: inline-size; overflow: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+.pane > .tablewrap:last-child { border: 0; border-radius: 0; margin: 0 -15px -13px; border-top: 1px solid var(--line-soft); }
 table { border-collapse: collapse; width: 100%; font-size: 12px; font-variant-numeric: tabular-nums; }
 th, td { padding: 5px 9px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line-soft); }
 th { position: sticky; top: 0; background: var(--sunken); color: var(--muted); font-weight: 600; font-size: 11px; letter-spacing: 0.02em; white-space: nowrap; z-index: 1; border-bottom-color: var(--line); }
@@ -315,6 +332,12 @@ td.clamp > div { max-width: 38ch; display: -webkit-box; -webkit-line-clamp: 3; -
 td.clamp > div.open { display: block; max-width: 70ch; }
 td.nowrap { white-space: nowrap; }
 td.target { font-family: var(--mono); font-size: 11.5px; min-width: 24ch; }
+/* Keep the adapter name on one line and the modeled tag beside it, not under it. */
+td.adapter { white-space: nowrap; }
+/* mode repeats on every row; it is the least useful column, so let it shrink. */
+td.mode, th.mode { font-size: 11.5px; color: var(--muted); }
+td.adapter .nm { font-family: var(--mono); font-size: 11.5px; }
+td.adapter .tag { margin-left: 6px; vertical-align: 1px; }
 .hint-find { color: var(--muted); font-style: italic; }
 .hit-yes { font-weight: 700; color: var(--hit); }
 tr.t-injected td:first-child, tr.t-control td:first-child, tr.t-direct td:first-child,

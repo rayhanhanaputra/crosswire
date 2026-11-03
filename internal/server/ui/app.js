@@ -1046,7 +1046,10 @@ function initTargets() {
       h('button', { class: 'btn', type: 'button', onclick: () => fill(null) }, 'New target'), del));
 
   root.append(h('div', { class: 'split' },
-    h('div', {}, h('div', { class: 'row spread' }, h('h2', {}, 'Targets'), h('button', { class: 'btn', type: 'button', onclick: () => fill(null) }, 'New')), list),
+    h('div', { class: 'pane' },
+      h('div', { class: 'row spread' }, h('h2', {}, 'Targets'),
+        h('button', { class: 'btn small-btn', type: 'button', title: 'Start a new target profile', onclick: () => fill(null) }, '+ New')),
+      list),
     h('div', { class: 'pane' }, form)));
 
   function syncTransport() {
@@ -1324,11 +1327,12 @@ function initRepeater() {
             h('button', { class: 'btn', type: 'button', onclick: () => { dirty = false; syncControl(); } }, 'Match length'))),
         h('p', { class: 'muted small' }, 'Benign text of similar length through the same channel. Without it a verdict cannot be confirmed.'),
         controlBox),
-      h('div', { class: 'pane' },
-        h('div', { class: 'row' },
-          h('label', { class: 'check' }, direct, 'Direct arm'),
-          h('label', { class: 'f' }, 'Repeats', repeats), h('label', { class: 'f' }, 'Concurrency', conc)),
-        h('div', { class: 'row' }, previewBtn, sendBtn))),
+      h('div', { class: 'pane run' },
+        h('div', { class: 'run-opts' },
+          h('label', { class: 'f' }, 'Repeats', repeats),
+          h('label', { class: 'f' }, 'Concurrency', conc),
+          h('label', { class: 'check' }, direct, 'Also send the payload as chat')),
+        h('div', { class: 'run-go' }, previewBtn, sendBtn))),
     h('div', {}, preview, result)));
 
   tabHooks.repeater = () => { refreshDirect(); if (!attack) build(); };
@@ -1483,10 +1487,12 @@ function initIntruder() {
           h('span', { class: 'row' }, h('label', { class: 'check' }, useControl, 'Send control arm'),
             h('button', { class: 'btn', type: 'button', onclick: () => { dirty = false; syncControl(); } }, 'Match length'))),
         controlBox),
-      h('div', { class: 'pane' },
-        h('div', { class: 'row' }, h('label', { class: 'check' }, direct, 'Direct arm'),
-          h('label', { class: 'f' }, 'Repeats per payload', repeats), h('label', { class: 'f' }, 'Concurrency', conc)),
-        h('div', { class: 'row' }, runBtn))),
+      h('div', { class: 'pane run' },
+        h('div', { class: 'run-opts' },
+          h('label', { class: 'f' }, 'Repeats per payload', repeats),
+          h('label', { class: 'f' }, 'Concurrency', conc),
+          h('label', { class: 'check' }, direct, 'Also send each payload as chat')),
+        h('div', { class: 'run-go' }, runBtn))),
     h('div', {}, result)));
 
   tabHooks.intruder = () => {
@@ -1517,11 +1523,17 @@ function initHistory() {
       for (const r of runs) {
         const inj = r.verdict.arms && r.verdict.arms.injected;
         const ctl = r.verdict.arms && r.verdict.arms.control;
-        const kn = (a) => (a && a.reached ? `${a.hits}/${a.reached} [${a.lower.toFixed(2)}–${a.upper.toFixed(2)}]${a.attempted == null ? '' : ` att ${a.attempted}`}` : '–');
+        const kn = (a) => (a && a.reached ? `${a.hits}/${a.reached} [${a.lower.toFixed(2)}–${a.upper.toFixed(2)}]` : '–');
+        // attempted belongs on the row, but not as width: it is a hover away.
+        const att = (a) => (a && a.reached && a.attempted != null ? `${a.attempted} forbidden call(s) attempted, ${a.hits} executed` : '');
         const tr = h('tr', { class: 'click' + (r.id === selected ? ' sel' : ''), tabindex: 0, 'data-id': r.id },
           h('td', { class: 'nowrap', title: fmtTime(r.started_at) }, fmtShort(r.started_at)), h('td', {}, badge(r.verdict.outcome)),
-          h('td', { class: 'target' }, r.target_name || r.target_id), h('td', {}, r.channel.adapter, r.channel.modeled ? [' ', h('span', { class: 'tag modeled' }, 'MODELED')] : null),
-          h('td', {}, r.mode), h('td', { class: 'mono nowrap' }, kn(inj)), h('td', { class: 'mono nowrap' }, kn(ctl)));
+          h('td', { class: 'target' }, r.target_name || r.target_id),
+          h('td', { class: 'adapter' }, h('span', { class: 'nm' }, r.channel.adapter),
+            r.channel.modeled ? h('span', { class: 'tag modeled' }, 'modeled') : null),
+          h('td', { class: 'mode' }, r.mode),
+          h('td', { class: 'mono nowrap', title: att(inj) }, kn(inj)),
+          h('td', { class: 'mono nowrap', title: att(ctl) }, kn(ctl)));
         tr.addEventListener('click', () => select(r.id));
         tr.addEventListener('keydown', (e) => { if (e.key === 'Enter') select(r.id); });
         body.append(tr);
@@ -1539,8 +1551,9 @@ function initHistory() {
 
   openRun = async (id) => { showTab('history'); await load(); await select(id); };
 
-  root.append(h('div', { class: 'split wide-left' },
-    h('div', {}, h('div', { class: 'row spread' }, h('h2', {}, 'Runs, newest first'), h('button', { class: 'btn', type: 'button', onclick: load }, 'Refresh')),
+  root.append(h('div', { class: 'split runs' },
+    h('div', { class: 'pane' }, h('div', { class: 'row spread' }, h('h2', {}, 'Runs, newest first'),
+      h('button', { class: 'btn small-btn', type: 'button', onclick: load }, 'Refresh')),
       status,
       h('div', { class: 'tablewrap' }, h('table', {},
         h('thead', {}, h('tr', {}, ['started', 'verdict', 'target', 'adapter', 'mode', 'injected k/N', 'control k/N'].map((c) => h('th', {}, c)))), body))),
