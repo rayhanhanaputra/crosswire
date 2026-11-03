@@ -1,6 +1,6 @@
 ---
 id:          C5-I2-invoice-note-payment-redirect
-registry_id: AAT-0014
+registry_id: CW-0014
 title:       Invoice Note Redirects a Payment Agent
 channel:     C5
 intent:      [I2, I4]
@@ -29,7 +29,7 @@ references:
   - "OWASP, Top 10 for LLM Applications 2025: Excessive Agency (LLM06), https://genai.owasp.org, 2025"
 ---
 
-# Invoice Note Redirects a Payment Agent  (AAT-0014 · C5-I2)
+# Invoice Note Redirects a Payment Agent  (CW-0014 · C5-I2)
 
 Business-email-compromise already works by changing the IBAN on an invoice. A
 document agent makes it cheaper: the attacker does not need to alter the IBAN field,

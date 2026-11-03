@@ -1,20 +1,20 @@
-# Python
+# Go build output
+/crosswire
+/crosswire.exe
+/dist/
+*.test
+
+# Crosswire run artifacts and local data
+/out/
+docs/results/target-logs/
+docs/results/*/workbench-db/
+docs/paper/crosswire-paper.html
+
+# Python (tools/build_registry.py, docs/results drivers)
 __pycache__/
 *.py[cod]
-.pytest_cache/
-*.egg-info/
-build/
-dist/
 .venv/
 venv/
 
-# Harness output (generated evidence reports)
-out/
-
 # OS / editor
 .DS_Store
-
-# Crosswire run artifacts
-crosswire/docs/results/target-logs/
-crosswire/docs/results/*/workbench-db/
-docs/paper/crosswire-paper.html

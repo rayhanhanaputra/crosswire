@@ -7,7 +7,7 @@ text-in-image, image steganography, and adversarial patches.
 
 | registry_id | Technique | Intent | Status |
 | --- | --- | --- | --- |
-| AAT-0004 | [Logistics Scan QR / OCR Injection](C5-I2-logistics-scan-injection.md) | I2, I1 | reproduced |
+| CW-0004 | [Logistics Scan QR / OCR Injection](C5-I2-logistics-scan-injection.md) | I2, I1 | reproduced |
 
 Contributions welcome. Copy [`../_template/technique.md`](../_template/technique.md)
 and open a single-file pull request.

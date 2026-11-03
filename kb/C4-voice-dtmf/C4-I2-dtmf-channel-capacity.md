@@ -1,6 +1,6 @@
 ---
 id:          C4-I2-dtmf-channel-capacity
-registry_id: AAT-0016
+registry_id: CW-0016
 title:       DTMF Tones — Sixteen Symbols, No Language
 channel:     C4
 intent:      [I2]
@@ -27,7 +27,7 @@ references:
   - "ITU-T, Recommendation Q.23: Technical features of push-button telephone sets, https://www.itu.int/rec/T-REC-Q.23, 1988"
 ---
 
-# DTMF Tones — Sixteen Symbols, No Language  (AAT-0016 · C4-I2)
+# DTMF Tones — Sixteen Symbols, No Language  (CW-0016 · C4-I2)
 
 The earlier knowledge base listed DTMF beside speech as a voice injection channel.
 It is not one. Crosswire renders real tones (`dtmf` adapter) and decodes them with a

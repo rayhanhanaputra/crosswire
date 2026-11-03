@@ -7,7 +7,7 @@ toggle sequences, Morse via a relay, LED, or buzzer, and timing patterns.
 
 | registry_id | Technique | Intent | Status |
 | --- | --- | --- | --- |
-| AAT-0003 | [Facility Relay Morse / Binary Actuation](C3-I2-facility-morse-actuation.md) | I2, I1 | reproduced |
+| CW-0003 | [Facility Relay Morse / Binary Actuation](C3-I2-facility-morse-actuation.md) | I2, I1 | reproduced |
 
 Contributions welcome. Copy [`../_template/technique.md`](../_template/technique.md)
 and open a single-file pull request.

@@ -5,14 +5,56 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  validate:
+  go:
+    name: go (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache: true
+
+      - name: Check formatting
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          unformatted="$(gofmt -l ./cmd ./internal)"
+          if [ -n "$unformatted" ]; then
+            echo "gofmt needed for:"; echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build
+        shell: bash
+        run: CGO_ENABLED=0 go build -o crosswire ./cmd/crosswire
+
+      - name: Selftest
+        shell: bash
+        run: ./crosswire selftest
+
+  registry:
+    name: knowledge base
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
@@ -20,101 +62,19 @@ jobs:
         run: pip install -r tools/requirements.txt
 
       - name: Validate knowledge base and mappings
-        run: python tools/build_registry.py --check
+        run: python -I tools/build_registry.py --check
 
       - name: Check registry is up to date
         run: |
-          python tools/build_registry.py
+          python -I tools/build_registry.py
           if ! git diff --quiet -- registry/; then
-            echo "registry/ is out of date. Run: python tools/build_registry.py"
+            echo "registry/ is out of date. Run: make registry"
             git --no-pager diff -- registry/
             exit 1
           fi
 
-  pytest:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade "pip>=23"
-          python -m pip install ".[dev,workbench]"
-      - name: Run tests
-        run: pytest -q
-
-  connector-e2e:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade "pip>=23"
-          python -m pip install ".[workbench]"
-      - name: Run connector and mapper matrix
-        run: |
-          set -euo pipefail
-          python -m tests.fixtures.connector_targets.server > /tmp/aat-connector-fixtures.log 2>&1 &
-          dummy_pid=$!
-          trap 'kill "$dummy_pid" 2>/dev/null || true' EXIT
-          for attempt in {1..30}; do
-            if curl --fail --silent http://127.0.0.1:9101/health > /dev/null; then
-              break
-            fi
-            sleep 1
-          done
-          curl --fail --silent http://127.0.0.1:9101/health > /dev/null || {
-            cat /tmp/aat-connector-fixtures.log
-            exit 1
-          }
-          python -m tools.test_workbench_e2e
-
-  frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - name: Install dependencies
-        run: npm --prefix web ci
-      - name: Audit production dependencies
-        run: npm --prefix web audit --omit=dev
-      - name: Install Chromium
-        run: npx --prefix web playwright install --with-deps chromium
-      - name: Lint and check formatting
-        run: |
-          npm --prefix web run lint
-          npm --prefix web run format -- --check
-      - name: Build frontend
-        run: npm --prefix web run build
-      - name: Run browser tests
-        run: npm --prefix web run test:ui
-
-  python-audit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Audit resolved Python dependencies
-        run: |
-          python -m pip install --upgrade "pip>=23" pip-audit
-          python -m pip_audit .
-
   markdownlint:
+    name: markdown
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -125,3 +85,6 @@ jobs:
             **/*.md
             !LICENSE-CODE
             !LICENSE-DOCS
+            !node_modules/**
+            !dist/**
+            !out/**

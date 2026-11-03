@@ -1,5 +1,5 @@
-This license applies to the code portions of AIAgentsAllTheThings, including the
-directories: harness/, hardware/, tests/, tools/, and web/.
+This license applies to the code portions of Crosswire, including the
+directories: cmd/, internal/, hardware/, and tools/.
 
 The knowledge base (kb/) and documentation (docs/) are licensed separately under
 CC BY 4.0; see LICENSE-DOCS.

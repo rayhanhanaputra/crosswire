@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build and validate the AIAgentsAllTheThings registry from knowledge-base entries.
+"""Build and validate the Crosswire registry from knowledge-base entries.
 
 The knowledge base (kb/) is the source of truth. This script reads each technique's
 YAML front matter, validates it against the controlled vocabularies in mappings/, and
@@ -36,7 +36,7 @@ SEVERITIES = ["low", "medium", "high", "critical"]
 EFFECTS = ["cyber-physical", "digital"]
 REQUIRED = ["id", "registry_id", "title", "channel", "intent", "effect",
             "severity", "scenario", "success", "status", "added", "references"]
-REGISTRY_ID_RE = re.compile(r"^AAT-\d{4}$")
+REGISTRY_ID_RE = re.compile(r"^CW-\d{4}$")
 
 CHANNEL_LABELS = {
     "C1": "Sensor value", "C2": "Data field", "C3": "Actuator state",
@@ -88,7 +88,7 @@ def validate(fm: dict, path: Path, vocab: dict,
         errors.append(f"{rel}: id '{fm.get('id')}' does not match filename '{path.stem}'")
     rid = fm.get("registry_id", "")
     if not REGISTRY_ID_RE.match(str(rid)):
-        errors.append(f"{rel}: registry_id '{rid}' must match AAT-NNNN")
+        errors.append(f"{rel}: registry_id '{rid}' must match CW-NNNN")
     elif rid in seen_ids:
         errors.append(f"{rel}: registry_id '{rid}' also used by {seen_ids[rid]}")
     else:

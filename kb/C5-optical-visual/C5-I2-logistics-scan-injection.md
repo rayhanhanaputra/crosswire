@@ -1,6 +1,6 @@
 ---
 id:          C5-I2-logistics-scan-injection
-registry_id: AAT-0004
+registry_id: CW-0004
 title:       Logistics Scan QR / OCR Injection
 channel:     C5
 intent:      [I2, I1]
@@ -27,7 +27,7 @@ references:
   - "OWASP, Top 10 for LLM Applications: Prompt Injection (LLM01), https://genai.owasp.org, 2025"
 ---
 
-# Logistics Scan QR / OCR Injection  (AAT-0004 · C5-I2)
+# Logistics Scan QR / OCR Injection  (CW-0004 · C5-I2)
 
 A vision-enabled logistics agent scans a QR code or reads a shipping label with OCR to
 route packages. An attacker prints an instruction into that visual content -- a QR code

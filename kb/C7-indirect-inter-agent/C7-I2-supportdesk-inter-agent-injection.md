@@ -1,6 +1,6 @@
 ---
 id:          C7-I2-supportdesk-inter-agent-injection
-registry_id: AAT-0005
+registry_id: CW-0005
 title:       Support-Desk Inter-Agent / RAG Injection
 channel:     C7
 intent:      [I2, I1]
@@ -29,7 +29,7 @@ references:
   - "OWASP, Top 10 for LLM Applications: Vector and Embedding Weaknesses (LLM08), https://genai.owasp.org, 2025"
 ---
 
-# Support-Desk Inter-Agent / RAG Injection  (AAT-0005 · C7-I2)
+# Support-Desk Inter-Agent / RAG Injection  (CW-0005 · C7-I2)
 
 In a multi-agent support pipeline, an intake agent summarises an untrusted customer
 ticket into a note, and a resolver agent later reads that note (and documents pulled

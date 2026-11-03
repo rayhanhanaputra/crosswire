@@ -1,7 +1,7 @@
 # Threat Taxonomy and Modality Injection Matrix
 
 This document defines how attacks against AI agents integrated with IoT and
-cyber-physical systems are classified in AIAgentsAllTheThings. It is intended to be
+cyber-physical systems are classified in Crosswire. It is intended to be
 stable enough to organize input adapters, security tests, and the knowledge base.
 
 ## Definitions
@@ -39,7 +39,7 @@ record the medium and encoding as tags. So a BLE advertisement carrying an instr
 is C6 (the agent decodes an RF frame) tagged `ble`; a spoofed numeric value carried over
 RF is C1 (the agent decodes a number); a flood of readings is C8 (the agent's decision
 is manipulated over a window, not by one message). Where a technique spans two channels,
-the entry's channel is the primary one and the other is noted (for example, AAT-0001 is
+the entry's channel is the primary one and the other is noted (for example, CW-0001 is
 C2 with a C1 value-injection variant).
 
 ### Axis 2 — Adversary intent (what the attacker wants)
@@ -56,7 +56,7 @@ C2 with a C1 value-injection variant).
 ### Axis 3 — Effect location (where the impact lands)
 
 Digital-only (data leaves the system) versus cyber-physical (an actuator or physical
-process is affected). The Workbench supports both because either can be reached through
+process is affected). Crosswire supports both because either can be reached through
 the same encode, deliver, capture, and evaluate workflow.
 
 ## Modality Injection Matrix
@@ -128,7 +128,7 @@ channel-injection or are covered better elsewhere:
 - overwhelming or socially engineering a human in the loop (T10, T15).
 
 Runtime long-term-memory poisoning is in scope when attacker-controlled content enters
-through a channel the agent later retrieves; see AAT-0010.
+through a channel the agent later retrieves; see CW-0010.
 
 These are noted so the omissions read as scoping decisions, not oversights, and are
 candidates for future entries or explicit companions.
@@ -136,13 +136,13 @@ candidates for future entries or explicit companions.
 ## Technique record format
 
 Each knowledge-base file begins with YAML front matter so entries are machine indexable
-and linkable from Workbench results. The canonical template is
+and linkable from a Crosswire run bundle. The canonical template is
 [`kb/_template/technique.md`](../kb/_template/technique.md); the fields are:
 
 ```yaml
 ---
 id:          Cx-Iy-scenario-shortname   # slug; equals the filename
-registry_id: AAT-XXXX                   # stable, citable; assigned on merge
+registry_id: CW-XXXX                   # stable, citable; assigned on merge
 title:       Human-readable title
 channel:     Cx                         # C1..C8
 intent:      [Iy]                        # one or more of I1..I6

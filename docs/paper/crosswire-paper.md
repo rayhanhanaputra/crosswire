@@ -131,7 +131,7 @@ A defense stops what it looks at. A classifier looks at text and pays, per chann
 
 ## Availability
 
-Crosswire (Apache-2.0), the reference agents, `experiment.py`, SimLab, and every trial: `crosswire/docs/results/2026-11-01.md` and `2026-11-01-rev2.md` in [repository].
+Crosswire (Apache-2.0), the reference agents, `experiment.py`, SimLab, and every trial: `docs/results/2026-11-01.md` and `2026-11-01-rev2.md` in [repository].
 
 ## References
 

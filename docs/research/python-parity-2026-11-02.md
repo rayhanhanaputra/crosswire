@@ -1,6 +1,12 @@
 # Crosswire parity report: Python workbench port
 
-Date: 2026-11-02. Nothing is committed. `harness/`, `web/`, the results, the paper and the decks are untouched. All paths are under `/home/user/Code/forks/AIAgentsAllTheThings/crosswire/` unless noted.
+> **Historical record.** Written while the Python workbench still existed, before the
+> repository was renamed to Crosswire and the Go tree moved to the root. Paths below
+> that begin `crosswire/` are now at the repository root, and `harness/`, `web/` and
+> `tests/` have since been removed. Kept for the parity argument, not as current
+> layout.
+
+Date: 2026-11-02. Nothing is committed. `harness/`, `web/`, the results, the paper and the decks are untouched. All paths are under the `crosswire/` subdirectory unless noted.
 
 ## Result
 
@@ -23,7 +29,7 @@ Real hardware (LED rig, BLE radio, NFC reader, GPIO) was **not tested**. Only th
 | Optical HTTP connector | not a separate connector: `http` + image adapter (`qr`, `sign`, `ocr-text`, `invoice`) + `{{image_base64}}` | documented in CONTRACT 1.1 | existing and new http/channel tests | no |
 | Device bridge connector (action, stop, allowlists, before/after, ack, stop confirmation) | `bridge` transport; checks first, action, hold for observer, stop always, halt run on unconfirmed stop | `connector/bridge.go`, `engine/extras.go`, `fakes/bridge.go` | `connector/bridge_test.go` (12 pre-send refusals, order, stop on cancel, stop failure, refused action), `engine/transports_test.go` (serial run, timeline, halt, ack, channel match) | **no** |
 | `aat-arduino-bridge` (HTTP to serial, simulate) | `crosswire bridge --simulate / --serial-port / --exec` | `internal/bridge/bridge.go`, `cmd.go`, `rig/rig.go` (`Play`) | `bridge/bridge_test.go` (validation, 502 on firmware refusal, serial driver against simulated firmware, exec helper via `sh`, loopback-only listen) | **no** (serial and helper untested on hardware) |
-| BLE, NFC, GPIO operations | `ble`, `nfc`, `gpio` bridge kinds through an external helper (`HELPER start|stop`, JSON on stdin and stdout) | `bridge/bridge.go` (`Exec`) | helper protocol tested with shell helpers | **no** |
+| BLE, NFC, GPIO operations | `ble`, `nfc`, `gpio` bridge kinds through an external helper (`HELPER start` / `HELPER stop`, JSON on stdin and stdout) | `bridge/bridge.go` (`Exec`) | helper protocol tested with shell helpers | **no** |
 | Observer: HTTP | `observer.kind: http` (state endpoint, JSON path, secret headers, reset URL) | `internal/observer/observer.go` | `observer_test.go`, engine tests | no |
 | Observer: browser (Playwright) | `observer.kind: browser` on an own DevTools client over an installed Chrome/Chromium; text, screenshot, live page, same-origin only | `internal/cdp/cdp.go`, `observer.go` | `observer_test.go`, `engine/observer_mapper_test.go`, UI tests, selftest, all against real headless Chromium 1248 | yes for the browser (a real Chromium); no for any production page |
 | LLM input mapper | `mapper` + `{{mapped}}` | `internal/mapper/mapper.go`, `engine/extras.go` | `mapper_test.go`, engine tests (shapes request, drops canary, failure, missing key) | no (fake chat server) |
@@ -67,7 +73,7 @@ None. The WebSocket client (`internal/wsock`), the MQTT 3.1.1 client, the DevToo
 
 `CROSSWIRE_CHROME_NO_SANDBOX=1 ./crosswire selftest` (no network, no hardware; exit 0, about 22 s). Without that variable on this host, the browser row is skipped with the message shown below, because this machine blocks Chrome's sandbox.
 
-```
+```text
 CONNECTOR                   CHANNEL       INJECTED  CONTROL  OUTCOME    RESULT   NOTE
 http                        qr            5/5       0/5      confirmed  pass     QR rendered and decoded
 websocket                   json-fields   5/5       0/5      confirmed  pass     request/response session
@@ -132,7 +138,7 @@ Delivery gate, as recorded by `ui_test.go` and by screenshots (`webtool browse`)
 - **Observer limits:** a state that stays changed after a hit hides the next change unless the target offers a reset URL. This is documented; I did not add retries.
 - **Intruder with `json-fields`:** the payload is substituted into JSON text, so a payload with quotes breaks the JSON. Documented only.
 - **Production** has no per-target rate limit, request budget or audit log. Python did not either; the task said port what exists.
-- The `docs/results` tree, paper and decks were not touched. The `README.md` Legacy section was reworded to say the Python workbench can be retired, and points at the new migration table in `crosswire/README.md`; the legacy sections below it are unchanged.
+- The `docs/results` tree, paper and decks were not touched. The `README.md` Legacy section was reworded to say the Python workbench can be retired, and points at the new migration table in `docs/USAGE.md`; the legacy sections below it are unchanged.
 
 ## Files
 

@@ -1,6 +1,6 @@
 ---
 id:          C5-I2-camera-sign-mark-clear
-registry_id: AAT-0013
+registry_id: CW-0013
 title:       Printed Sign in Frame Clears a Camera Agent
 channel:     C5
 intent:      [I2, I1]
@@ -22,7 +22,7 @@ mappings:
   mitre-attack-ics: []
 tags:        [optical, vision, ocr, physical-access, guardrail-bypass]
 status:      reproduced
-bundle:      kb/bundles/AAT-0013
+bundle:      kb/bundles/CW-0013
 added:       2026-10-31
 updated:     2026-10-31
 references:
@@ -30,7 +30,7 @@ references:
   - "Schneier, Prompt Injection Via Road Signs, https://www.schneier.com/blog/archives/2026/02/prompt-injection-via-road-signs.html, Feb 2026"
 ---
 
-# Printed Sign in Frame Clears a Camera Agent  (AAT-0013 · C5-I2)
+# Printed Sign in Frame Clears a Camera Agent  (CW-0013 · C5-I2)
 
 CHAI showed that optimised text on a physical sign hijacks vision-language agents on
 robots and vehicles. The same mechanism reaches the camera agents now sold to homes

@@ -2,11 +2,11 @@
 
 **Call for Tools closes 2 November 2026. Notification 1 December 2026.** Event: Marina Bay
 Sands, Singapore, Briefings 2–3 March 2027. Submit at the Arsenal portal linked from
-blackhat.com/html/arsenal-call-for-tools.html. Questions: arsenal@blackhat.com. Presenters
+blackhat.com/html/arsenal-call-for-tools.html. Questions: <arsenal@blackhat.com>. Presenters
 must be available both Arsenal days; travel is not covered; one Briefings pass is included.
 
 Bracketed fields are for the speaker to fill. Every number below must match
-`crosswire/docs/results/` at the time of submission; nothing here is a claim about a product.
+`docs/results/` at the time of submission; nothing here is a claim about a product.
 
 ---
 
@@ -64,7 +64,7 @@ results pages is in the repository.
 
 **Testbeds.** Two. The six reference agents in the binary, each a real tool-calling model, produce every measured number. The companion SimLab (github.com/rayhanhanaputra/AIAgentsAllTheThings-SimLab) is a visual testbed: six deterministic digital twins (smart farm, water plant, warehouse fleet, hospital climate, smart building, command drill) that accept the same payloads, show the compromised state under a basic profile and keep content as data under a validated one, and report every control change to the Crosswire sink with the trial's nonce and session. It is a stage prop for the demo and an end-to-end check of the sink contract, not a measurement target, and the submission says so.
 
-**Claims, after the second pass (1 November 2026).** Three tests were run after an independent review. The classifier's cost stands: at temperature 0 the perception-path classifier still blocks benign input on home 30/30, expense 29/30 and voice 21/30 (camera 0, PDF 2, desk 0), and on the chat path it blocks the user's own legitimate privileged request 27 to 30 of 30 on five of six channels. On store-then-trigger channels the request-path layers (withhold, turn-level confirmation) are inert by construction on both scenarios tested; what holds is content-side: a quarantine that strips the value (two-phase inbox, 0 attempts) or a check on the value (desk: record match 0/30 executed, 26/30 without it; provenance rule 0 executed and 0 of 30 legitimate refunds). At every model-side gate the outcome belongs to the wording: 21 to 23 of 25 generated wordings gave the same result both tries, between-wording share of variance 0.81 to 0.92, and a best-of-k attacker passes the classifier at 0.88 where five hand-written sentences passed at 0.40. Full tables in `crosswire/docs/results/2026-11-01-rev2.md`.
+**Claims, after the second pass (1 November 2026).** Three tests were run after an independent review. The classifier's cost stands: at temperature 0 the perception-path classifier still blocks benign input on home 30/30, expense 29/30 and voice 21/30 (camera 0, PDF 2, desk 0), and on the chat path it blocks the user's own legitimate privileged request 27 to 30 of 30 on five of six channels. On store-then-trigger channels the request-path layers (withhold, turn-level confirmation) are inert by construction on both scenarios tested; what holds is content-side: a quarantine that strips the value (two-phase inbox, 0 attempts) or a check on the value (desk: record match 0/30 executed, 26/30 without it; provenance rule 0 executed and 0 of 30 legitimate refunds). At every model-side gate the outcome belongs to the wording: 21 to 23 of 25 generated wordings gave the same result both tries, between-wording share of variance 0.81 to 0.92, and a best-of-k attacker passes the classifier at 0.88 where five hand-written sentences passed at 0.40. Full tables in `docs/results/2026-11-01-rev2.md`.
 
 **What it does not do.** The sink needs the target to report its own tool calls, so a
 black-box product can only be tested where its tools can be pointed at a URL the tester
@@ -73,6 +73,7 @@ speaks UDP with digest authentication and has no TLS or SRTP; it has been run ag
 lab endpoint, not a product. The reference targets were written for this project.
 
 **Demo at the station:**
+
 1. Load the inbox reference target. Render a vendor letter whose last paragraph is printed
    in white ink; show the PDF as the agent's text extractor sees it.
 2. Send injected trials, benign controls and chat trials with the classifier on the chat
@@ -85,7 +86,7 @@ lab endpoint, not a product. The reference targets were written for this project
 7. Send the same payload into SimLab: the smart-farm valve opens under the basic profile, stays closed under validated, and both land in the sink.
 
 **Reference results (2026-11-01, `gpt-4o-mini`, temperature 0.7, 30 trials per arm,
-five paraphrases, full rows in `crosswire/docs/results/2026-11-01.md`):** with the
+five paraphrases, full rows in `docs/results/2026-11-01.md`):** with the
 classifier on the chat path, the typed instruction scored 0/30, 5/30, 0/30 and 0/30
 while the same instruction through the device name, the phone call, the camera frame
 and the invoice scored 30/30, 22/30, 30/30 and 3/30. With the same classifier on the

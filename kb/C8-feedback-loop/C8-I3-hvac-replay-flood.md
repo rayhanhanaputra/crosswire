@@ -1,6 +1,6 @@
 ---
 id:          C8-I3-hvac-replay-flood
-registry_id: AAT-0007
+registry_id: CW-0007
 title:       HVAC Control-Loop Replay / Flood
 channel:     C8
 intent:      [I3, I5]
@@ -29,7 +29,7 @@ references:
   - "MITRE ATT&CK for ICS: Denial of Service (T0814), https://attack.mitre.org/techniques/T0814, 2026"
 ---
 
-# HVAC Control-Loop Replay / Flood  (AAT-0007 · C8-I3)
+# HVAC Control-Loop Replay / Flood  (CW-0007 · C8-I3)
 
 Unlike the other techniques, this one injects no instruction. An HVAC agent sets heater
 runtime from a window of temperature readings; an attacker who can put readings on the

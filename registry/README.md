@@ -23,6 +23,6 @@ Validation enforced by the builder:
 
 - Required front-matter fields are present, including a non-empty `success`.
 - `id` equals the entry filename.
-- `registry_id` is unique and matches the pattern `AAT-NNNN`.
+- `registry_id` is unique and matches the pattern `CW-NNNN`.
 - Every `mappings` id exists in the corresponding file under `mappings/`.
 - Every `tags` id exists in `mappings/tags.yaml`.

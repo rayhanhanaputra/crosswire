@@ -1,6 +1,6 @@
 ---
 id:          C1-I3-process-tank-sensor-spoof
-registry_id: AAT-0008
+registry_id: CW-0008
 title:       Industrial Tank Sensor-Value Spoof
 channel:     C1
 intent:      [I3]
@@ -30,7 +30,7 @@ references:
   - "OWASP, Top 10 for LLM Applications: Excessive Agency (LLM06), https://genai.owasp.org, 2025"
 ---
 
-# Industrial Tank Sensor-Value Spoof  (AAT-0008 · C1-I3)
+# Industrial Tank Sensor-Value Spoof  (CW-0008 · C1-I3)
 
 An agent opens a tank's inlet valve to fill it when a level sensor reads low. An
 attacker who can influence that reading spoofs it -- a physically impossible value, or a

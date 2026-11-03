@@ -12,7 +12,7 @@ around 31 July to 5 August 2027 in Las Vegas. Check blackhat.com before relying 
 any of this; the page returns 403 to scripted fetches, so open it in a browser.
 
 Bracketed fields are for the speaker to fill. Every number below is from
-`crosswire/docs/results/2026-11-01.md`; update both together.
+`docs/results/2026-11-01.md`; update both together.
 
 ---
 
@@ -60,9 +60,10 @@ reference targets, the driver script and the result JSON.
 
 **Testbeds.** Two. The six reference agents in the binary, each a real tool-calling model, produce every measured number. The companion SimLab (github.com/rayhanhanaputra/AIAgentsAllTheThings-SimLab) is a visual testbed: six deterministic digital twins (smart farm, water plant, warehouse fleet, hospital climate, smart building, command drill) that accept the same payloads, show the compromised state under a basic profile and keep content as data under a validated one, and report every control change to the Crosswire sink with the trial's nonce and session. It is a stage prop for the demo and an end-to-end check of the sink contract, not a measurement target, and the submission says so.
 
-**Claims, after the second pass (1 November 2026).** Three tests were run after an independent review. The classifier's cost stands: at temperature 0 the perception-path classifier still blocks benign input on home 30/30, expense 29/30 and voice 21/30 (camera 0, PDF 2, desk 0), and on the chat path it blocks the user's own legitimate privileged request 27 to 30 of 30 on five of six channels. On store-then-trigger channels the request-path layers (withhold, turn-level confirmation) are inert by construction on both scenarios tested; what holds is content-side: a quarantine that strips the value (two-phase inbox, 0 attempts) or a check on the value (desk: record match 0/30 executed, 26/30 without it; provenance rule 0 executed and 0 of 30 legitimate refunds). At every model-side gate the outcome belongs to the wording: 21 to 23 of 25 generated wordings gave the same result both tries, between-wording share of variance 0.81 to 0.92, and a best-of-k attacker passes the classifier at 0.88 where five hand-written sentences passed at 0.40. Full tables in `crosswire/docs/results/2026-11-01-rev2.md`.
+**Claims, after the second pass (1 November 2026).** Three tests were run after an independent review. The classifier's cost stands: at temperature 0 the perception-path classifier still blocks benign input on home 30/30, expense 29/30 and voice 21/30 (camera 0, PDF 2, desk 0), and on the chat path it blocks the user's own legitimate privileged request 27 to 30 of 30 on five of six channels. On store-then-trigger channels the request-path layers (withhold, turn-level confirmation) are inert by construction on both scenarios tested; what holds is content-side: a quarantine that strips the value (two-phase inbox, 0 attempts) or a check on the value (desk: record match 0/30 executed, 26/30 without it; provenance rule 0 executed and 0 of 30 legitimate refunds). At every model-side gate the outcome belongs to the wording: 21 to 23 of 25 generated wordings gave the same result both tries, between-wording share of variance 0.81 to 0.92, and a best-of-k attacker passes the classifier at 0.88 where five hand-written sentences passed at 0.40. Full tables in `docs/results/2026-11-01-rev2.md`.
 
 **Attendee takeaways:**
+
 - Where a prompt-injection classifier has to sit to see the inputs an agent acts on,
   with the same classifier measured on each path against the same agent.
 - A verdict procedure (control arm, nonce, sink, attempted vs executed, intervals)

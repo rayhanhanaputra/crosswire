@@ -7,7 +7,7 @@ timing races that skew the agent's decisions or destabilize the process it contr
 
 | registry_id | Technique | Intent | Status |
 | --- | --- | --- | --- |
-| AAT-0007 | [HVAC Control-Loop Replay / Flood](C8-I3-hvac-replay-flood.md) | I3, I5 | reproduced |
+| CW-0007 | [HVAC Control-Loop Replay / Flood](C8-I3-hvac-replay-flood.md) | I3, I5 | reproduced |
 
 Contributions welcome. Copy [`../_template/technique.md`](../_template/technique.md)
 and open a single-file pull request.

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crosswire</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke-width=%272.4%27 stroke-linecap=%27round%27%3E%3Cpath d=%27M3 6c6 0 12 12 18 12%27 stroke=%27%23253530%27/%3E%3Cpath d=%27M3 18c6 0 12-12 18-12%27 stroke=%27%23C8451F%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="app.css">
+<script>
+  // Apply the saved theme before first paint, so the page never flashes the other one.
+  try {
+    var t = localStorage.getItem('crosswire-theme');
+    if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+  } catch (e) { /* private mode, blocked storage: fall back to the system theme */ }
+</script>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="mark">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke-width="2.2" stroke-linecap="round"><path class="w1" d="M3 6c6 0 12 12 18 12"/><path class="w2" d="M3 18c6 0 12-12 18-12"/></svg>
+    </span>
+    <h1>Crosswire</h1>
+    <span class="sep"></span>
+    <span class="tagline">Signal-to-prompt injection workbench</span>
+  </div>
+  <p class="meta">
+    <span id="ver">version ...</span><span id="datadir"></span>
+    <button id="theme" class="icon" type="button" title="Switch between the light and dark theme" aria-label="Switch theme">
+      <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>
+      <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.5 1.5M17.1 17.1l1.5 1.5M18.6 5.4l-1.5 1.5M6.9 17.1l-1.5 1.5"/></svg>
+    </button>
+    <button id="stop-all" class="btn stop" type="button" title="Cancel every run in flight. A device bridge still sends its stop.">Stop all</button>
+  </p>
+</header>
+<nav class="tabs" role="tablist" aria-label="Workbench">
+  <button role="tab" id="tab-btn-targets" aria-controls="tab-targets" data-tab="targets"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="3.6"/><path d="M12 1.6v2.6M12 19.8v2.6M1.6 12h2.6M19.8 12h2.6"/></svg>Targets</button>
+  <button role="tab" id="tab-btn-repeater" aria-controls="tab-repeater" data-tab="repeater"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5h12.5l-2.6-2.6M21 16.5H8.5l2.6 2.6"/></svg>Repeater</button>
+  <button role="tab" id="tab-btn-intruder" aria-controls="tab-intruder" data-tab="intruder"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 5.5h16M4 12h16M4 18.5h16"/><circle cx="8.5" cy="5.5" r="1.9" fill="currentColor" stroke="none"/><circle cx="14.5" cy="12" r="1.9" fill="currentColor" stroke="none"/><circle cx="10.5" cy="18.5" r="1.9" fill="currentColor" stroke="none"/></svg>Intruder</button>
+  <button role="tab" id="tab-btn-history" aria-controls="tab-history" data-tab="history"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 12a8.4 8.4 0 1 0 2.6-6.1L3 8.8"/><path d="M3 4.4v4.4h4.4M12 7.6V12l3.4 2"/></svg>History</button>
+  <button role="tab" id="tab-btn-sink" aria-controls="tab-sink" data-tab="sink"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v8.4M8.6 8.4 12 11.8l3.4-3.4"/><path d="M4 14.4c0 3.4 3.6 6.1 8 6.1s8-2.7 8-6.1"/></svg>Sink</button>
+</nav>
+<main>
+  <section id="tab-targets" role="tabpanel" aria-labelledby="tab-btn-targets" hidden></section>
+  <section id="tab-repeater" role="tabpanel" aria-labelledby="tab-btn-repeater" hidden></section>
+  <section id="tab-intruder" role="tabpanel" aria-labelledby="tab-btn-intruder" hidden></section>
+  <section id="tab-history" role="tabpanel" aria-labelledby="tab-btn-history" hidden></section>
+  <section id="tab-sink" role="tabpanel" aria-labelledby="tab-btn-sink" hidden></section>
+</main>
+<footer>Use only against systems you own or are authorized to test.</footer>
+<div id="toasts" role="status" aria-live="polite"></div>
+<div id="modal-root"></div>
+<script src="app.js"></script>
+</body>
+</html>

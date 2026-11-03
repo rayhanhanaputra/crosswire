@@ -1,6 +1,6 @@
 ---
 id:          C3-I1-morse-led-channel-capacity
-registry_id: AAT-0015
+registry_id: CW-0015
 title:       Morse over an LED — a Channel-Capacity Negative Result
 channel:     C3
 intent:      [I1]
@@ -28,7 +28,7 @@ references:
   - "ITU-R, Recommendation M.1677-1: International Morse code, https://www.itu.int/rec/R-REC-M.1677, 2009"
 ---
 
-# Morse over an LED — a Channel-Capacity Negative Result  (AAT-0015 · C3-I1)
+# Morse over an LED — a Channel-Capacity Negative Result  (CW-0015 · C3-I1)
 
 The earlier version of this project treated a Morse-blinking LED as an injection
 channel and sent the *decoded* text to the target, which skips the only physical

@@ -1,6 +1,6 @@
 ---
 id:          Cx-Iy-scenario-shortname          # slug; must equal the filename without .md
-registry_id: AAT-XXXX                           # assigned by a maintainer on merge; never reuse
+registry_id: CW-XXXX                           # assigned by a maintainer on merge; never reuse
 title:       Human-readable technique title
 channel:     Cx                                 # one of C1..C8 (see docs/taxonomy.md)
 intent:      [Iy]                               # one or more of I1..I6
@@ -18,14 +18,14 @@ mappings:                                       # at least one non-empty mapping
   mitre-attack-ics: []                          # ids from mappings/mitre-attack-ics.yaml (cyber-physical)
 tags:        []                                 # ids from mappings/tags.yaml
 status:      documented                         # documented | reproduced
-# bundle:    kb/bundles/AAT-XXXX/               # required when status is reproduced
+# bundle:    kb/bundles/CW-XXXX/               # required when status is reproduced
 added:       YYYY-MM-DD
 updated:     YYYY-MM-DD
 references:
   - "Author, Title, https://…, Month DD, YYYY"
 ---
 
-# Title  (AAT-XXXX · Cx-Iy)
+# Title  (CW-XXXX · Cx-Iy)
 
 ## Summary
 

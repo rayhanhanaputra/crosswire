@@ -1,6 +1,6 @@
 ---
 id:          C3-I2-facility-morse-actuation
-registry_id: AAT-0003
+registry_id: CW-0003
 title:       Facility Relay Morse / Binary Actuation
 channel:     C3
 intent:      [I2, I1]
@@ -28,7 +28,7 @@ references:
   - "OWASP, Top 10 for LLM Applications: Excessive Agency (LLM06), https://genai.owasp.org, 2025"
 ---
 
-# Facility Relay Morse / Binary Actuation  (AAT-0003 · C3-I2)
+# Facility Relay Morse / Binary Actuation  (CW-0003 · C3-I2)
 
 A facility agent watches a status-indicator relay that normally signals maintenance
 state with short blink codes. An attacker who can toggle that indicator encodes an

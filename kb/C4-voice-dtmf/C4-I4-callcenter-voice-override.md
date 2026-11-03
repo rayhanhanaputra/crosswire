@@ -1,6 +1,6 @@
 ---
 id:          C4-I4-callcenter-voice-override
-registry_id: AAT-0002
+registry_id: CW-0002
 title:       Call-Center Voice Instruction Override
 channel:     C4
 intent:      [I4, I1, I2]
@@ -27,7 +27,7 @@ references:
   - "OWASP, Top 10 for LLM Applications: Sensitive Information Disclosure (LLM02), https://genai.owasp.org, 2025"
 ---
 
-# Call-Center Voice Instruction Override  (AAT-0002 · C4-I4)
+# Call-Center Voice Instruction Override  (CW-0002 · C4-I4)
 
 A caller reaches an LLM voice agent and speaks an instruction that overrides the
 agent's refusal policy, or sends a DTMF sequence the agent maps to a privileged

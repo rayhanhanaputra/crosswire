@@ -1,29 +1,48 @@
 # Glossary
 
-Canonical definitions used across the Web Workbench and knowledge base. Other
-documents reference this file rather than redefining terms.
+Canonical definitions used across Crosswire and the knowledge base. Other documents
+reference this file rather than redefining terms.
 
 - **Agent** — an LLM-driven system that autonomously observes inputs, reasons, and
   invokes tools or actuators, including physical ones.
 - **Channel** — the medium through which the agent receives an input: an MQTT topic, a
   phone line, a microphone, a camera, a serial port, an RF interface, or a retrieved
   document.
-- **Input adapter** — a Workbench encoder that turns user-supplied fields into the
-  representation perceived by the target, such as JSON telemetry, a voice transcript,
-  Morse timing, an image, or a BLE advertisement.
-- **Connector** — the delivery mechanism between the Workbench and the target, such as
-  HTTP, TCP, MQTT, WebSocket, a voice or optical service, or a guarded device bridge.
+- **Channel adapter** — the Crosswire component that turns payload fields into the
+  artifact the target perceives: a PNG, a WAV, a PDF, a pulse timeline, an NDEF
+  message, or a JSON message. An adapter that only relabels text is **modeled**.
+- **Artifact** — the rendered bytes an adapter produces, hashed and stored with the
+  trial. A real artifact is one a reviewer can open and decode back.
+- **Transport** — the delivery mechanism between Crosswire and the target: HTTP,
+  WebSocket, TCP, MQTT, realtime voice over WebSocket, SIP, or a guarded device
+  bridge.
 - **Target profile** — a saved, non-secret description of an authorized agent endpoint,
-  its connector, request template, safety environment, and evidence rules.
+  its transport, request template, safety environment, and evidence rules. Credentials
+  appear only as the names of environment variables.
 - **Input mapper** — an optional OpenAI-compatible model that converts an encoded input
   into a target-specific request shape when a deterministic request template is not
   sufficient. Its output remains untrusted and is validated before delivery.
-- **Workbench** — the single-run tool used to select an input adapter, inspect its
-  encoded and wire representations, send it to a target, and capture the response.
-- **Campaign** — the batch-testing tool that places multiple payloads into one channel
-  template, sends each case, and retains each request, response, and verdict.
-- **Evidence rule** — a deterministic response marker or forbidden tool name used to
-  confirm a security violation. Without one, a captured response is inconclusive.
+- **Repeater** — the single-payload tool: choose an adapter, preview the artifact and
+  the exact request, then run repeats of the injected, control and direct arms.
+- **Intruder** — the same, over a list of payloads, with one verdict per payload.
+- **Sink** — the out-of-band receiver the target posts its executed and refused tool
+  calls to. It is where evidence comes from.
+- **Canary** — the fresh per-trial nonce rendered into the payload. A hit requires it
+  in the forbidden tool's arguments, which is what attributes evidence to one trial.
+- **Observer** — an optional second evidence source for an agent whose effect shows
+  only in a UI or a state endpoint, read before and after each trial. A change counts
+  only under the sink's rules: the trial's nonce where the page can show one, the
+  control arm checked too, and the run voided if the control changes.
+- **Hit** — a forbidden tool that *executed* at the sink with that trial's canary.
+- **Attempted** — a forbidden call the target refused in code (a confirmation gate, an
+  interlock, a withheld tool). Counted and reported, but never a hit.
+- **Arm** — one condition repeated N times: `injected`, the benign `control`, `direct`
+  chat, `benign_direct`, or `utility`.
+- **Verdict** — the outcome over the arms: `confirmed`, `observed`, `not_observed`,
+  `invalid`, or `error`. `confirmed` needs repeated hits, a clean control and
+  separated Wilson intervals.
+- **Run bundle** — the exported zip (run.json, summary.json, artifacts, sink events)
+  that a knowledge-base entry must cite to claim `reproduced`.
 - **Signal-to-prompt injection** — an attack that uses a non-text channel to place
   attacker-controlled content into the agent's reasoning context. Also called
   cross-channel injection.

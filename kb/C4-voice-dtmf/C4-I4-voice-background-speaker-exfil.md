@@ -1,6 +1,6 @@
 ---
 id:          C4-I4-voice-background-speaker-exfil
-registry_id: AAT-0012
+registry_id: CW-0012
 title:       Spoken Instruction from a Nearby Speaker to a Voice Assistant
 channel:     C4
 intent:      [I4, I2]
@@ -23,14 +23,14 @@ mappings:
   mitre-attack-ics: []
 tags:        [voice, exfiltration, guardrail-bypass]
 status:      reproduced
-bundle:      kb/bundles/AAT-0012
+bundle:      kb/bundles/CW-0012
 added:       2026-10-31
 updated:     2026-10-31
 references:
   - "OWASP, Top 10 for LLM Applications 2025: Prompt Injection (LLM01), https://genai.owasp.org, 2025"
 ---
 
-# Spoken Instruction from a Nearby Speaker to a Voice Assistant  (AAT-0012 · C4-I4)
+# Spoken Instruction from a Nearby Speaker to a Voice Assistant  (CW-0012 · C4-I4)
 
 Voice assistants with tools hear everything in the room. An instruction spoken by a
 television, an advertisement, or a phone next to the device reaches the model through

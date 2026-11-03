@@ -1,37 +1,38 @@
 # Arduino / ESP32 LED rig
 
-This rig converts an allowlisted Workbench `led_sequence` into physical LED pulses for
-testing an agent that reads a light sensor or camera. The local HTTP bridge accepts only
-one configured device ID and LED pin, validates every step and duration, and always
-supports an immediate stop command.
+This rig turns a Crosswire `morse-led` or `binary-toggle` pulse timeline into physical
+LED pulses, for testing an agent that reads a light sensor or a camera. The
+`crosswire bridge` serial backend accepts only the configured device ID and pin,
+validates every step and duration against the allowlist, and always sends a stop.
 
-1. Install the hardware dependencies and Chromium observer support:
+1. Install ArduinoJson, open `crosswire_led_rig/crosswire_led_rig.ino`, set `LED_PIN`
+   to the pin you will allowlist, and flash it to the Arduino or ESP32.
 
-   ```bash
-   python3 -m pip install ".[workbench,hardware]"
-   python3 -m playwright install chromium
-   ```
-
-2. Install ArduinoJson, open `aat_led_rig/aat_led_rig.ino`, set `LED_PIN`, and flash it
-   to the Arduino or ESP32.
-3. Start the loopback serial bridge:
+2. Build Crosswire and start the bridge on that serial port:
 
    ```bash
-   aat-arduino-bridge --serial-port /dev/tty.usbmodem0001 --device-id arduino-01 --pin 9
+   go build -o crosswire ./cmd/crosswire
+   ./crosswire bridge --kind led --serial-port /dev/tty.usbmodem0001 \
+     --device-id arduino-01 --pin 9
    ```
 
-   Use `aat-arduino-bridge --simulate` to verify the Workbench profile without hardware.
-4. Create a **Device bridge** target using:
+   `./crosswire bridge --simulate --kind led` drives nothing and lets you check the
+   target profile without hardware.
+
+3. In **Targets**, create a target with `transport: bridge` and:
 
    - action URL: `http://127.0.0.1:9910/action`
    - stop URL: `http://127.0.0.1:9910/stop`
-   - device family: **Arduino / ESP32 LED sequence**
+   - kind: `led`
    - device ID: `arduino-01`
-   - selected and allowed resource: `pin-9`
-   - Binary/Morse channel with the generated `{{body}}` request template
-5. Configure an HTTP observer or a Playwright browser observer for the target agent's
-   out-of-band response.
+   - allowed resource: `pin-9`
 
-Keep the LED electrically within the board's current limits. Use a resistor and an
-external driver when the selected light source requires more current than the GPIO can
-safely provide.
+4. In **Repeater**, pick the `morse-led` or `binary-toggle` adapter. Set an
+   **observer** on the target (an HTTP state endpoint, or a page read in headless
+   Chrome) so the agent's reaction becomes evidence under the nonce and control rules.
+
+Keep the LED within the board's current limits. Use a resistor, and an external driver
+when the light source needs more current than the GPIO can safely supply.
+
+The wire protocol between the bridge and the board is in
+[`docs/CONTRACT.md`](../../docs/CONTRACT.md) section 10.1.

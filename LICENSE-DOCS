@@ -1,13 +1,13 @@
 Creative Commons Attribution 4.0 International (CC BY 4.0)
 
 This license applies to the knowledge base and documentation portions of
-AIAgentsAllTheThings, namely the directories: kb/ and docs/, and the generated
+Crosswire, namely the directories: kb/ and docs/, and the generated
 registry/ files derived from them.
 
-The code portions (harness/, hardware/, tests/, tools/, and web/) are licensed
+The code portions (cmd/, internal/, hardware/, and tools/) are licensed
 separately under the Apache License 2.0; see LICENSE-CODE.
 
-Copyright (c) 2026 The AIAgentsAllTheThings authors.
+Copyright (c) 2026 The Crosswire authors.
 
 You are free to:
 
@@ -45,5 +45,5 @@ terms of the full legal code linked above.
 
 Suggested attribution:
 
-    "AIAgentsAllTheThings" by The AIAgentsAllTheThings authors, licensed under
-    CC BY 4.0. Source: https://github.com/rayhanhanaputra/AIAgentsAllTheThings
+    "Crosswire" by The Crosswire authors, licensed under
+    CC BY 4.0. Source: https://github.com/rayhanhanaputra/crosswire

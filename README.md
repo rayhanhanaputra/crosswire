@@ -1,13 +1,18 @@
-# AIAgentsAllTheThings
-
-<p align="center">
-  <img src="docs/assets/banner-aat.webp" alt="AIAgentsAllTheThings — security workbench for testing AI agents across text, voice, sensors, images, and device inputs" width="100%">
-</p>
+# Crosswire
 
 **Signal-to-prompt injection: testing AI agents through the inputs they perceive,
 not the chat box.**
 
+A single Go binary (macOS, Windows, Linux; no cgo) with an embedded web UI in the
+Burp Repeater/Intruder style, six reference targets that are real tool-calling LLM
+agents, and a verdict a reviewer can check.
+
 > Use only against systems you own or are explicitly authorized to assess.
+
+<p align="center">
+  <img src="docs/assets/crosswire-history.webp" alt="Crosswire History tab: a confirmed run of the desk agent with the interlock off, 26 of 30 injected trials hit against 0 of 30 controls, with the per-trial table of arms, canaries, findings and sink events" width="100%">
+</p>
+<p align="center"><sub>A run's verdict: injected and control arms with Wilson intervals, attempted versus executed, utility and benign-chat arms, and every trial's sink events.</sub></p>
 
 ## The claim
 
@@ -23,16 +28,38 @@ Prior work established that text in the physical scene hijacks vision agents
 result. It adds the non-optical channels, the guardrail-placement measurement, the
 channel-capacity negative results, and a reusable tool.
 
-## Crosswire — the workbench
+## Quick start
 
-[`crosswire/`](crosswire/) is a single Go binary (macOS, Windows, Linux; no cgo)
-with an embedded web UI in the Burp Repeater/Intruder style, plus six reference
-targets that are real tool-calling LLM agents.
+Go 1.22+. Nothing else to install — no Python, no Node, no npm.
 
-<p align="center">
-  <img src="docs/assets/crosswire-history.webp" alt="Crosswire History tab: a confirmed run of the desk agent with the interlock off, 26 of 30 injected trials hit against 0 of 30 controls, with the per-trial table of arms, canaries, findings and sink events" width="100%">
-</p>
-<p align="center"><sub>A run's verdict: injected and control arms with Wilson intervals, attempted versus executed, utility and benign-chat arms, and every trial's sink events.</sub></p>
+```bash
+make build                              # or: go build -o crosswire ./cmd/crosswire
+./crosswire selftest                    # every transport against in-process fakes, offline
+./crosswire serve                       # http://127.0.0.1:7117
+```
+
+The reference targets need an OpenAI-compatible model, in a second terminal:
+
+```bash
+export OPENAI_API_KEY=...               # or CROSSWIRE_LLM_API_KEY
+./crosswire target home-agent           # vulnerable by default, on :7201
+./crosswire target home-agent --policy hardened
+./crosswire target voice-agent --guardrail
+```
+
+Then, in the UI: **Targets** → "Load reference target", **Repeater** → pick an
+adapter, write the payload with `{{canary}}` and a benign control, set repeats,
+**Preview**, **Send**. [`docs/USAGE.md`](docs/USAGE.md) is the full guide.
+
+```text
+payload ──► channel adapter ──► real artifact (PNG / WAV / PDF / pulses)
+        ──► target /perceive ──► agent decodes, reasons, calls tools
+                                        │
+                                        └──► every tool call, executed or refused ──► Crosswire sink
+verdict = forbidden tool EXECUTED at the sink with this trial's canary,
+          k/N over repeats, benign control clean, Wilson intervals separated
+          (refused calls are reported as "attempted", never as hits)
+```
 
 <table>
 <tr>
@@ -45,273 +72,137 @@ targets that are real tool-calling LLM agents.
 </tr>
 </table>
 
-```bash
-cd crosswire && go build ./cmd/crosswire
-./crosswire serve                       # http://127.0.0.1:7117
-./crosswire target home-agent           # vulnerable by default
-./crosswire target home-agent --policy hardened
-./crosswire target voice-agent --guardrail
-```
-
-What makes it more than a re-skin of the Python workbench below:
+## What it does
 
 - **Real artifacts.** `qr` renders a PNG and decodes it back; `sign` and `invoice`
   render images for a vision model; `speech` renders a WAV; `dtmf` renders tones and
-  decodes them with a Goertzel bank; `morse-led` drives the Arduino rig over serial.
-  A channel that only renames a JSON key is labelled **modeled** everywhere.
+  decodes them with a Goertzel bank; `pdf`, `calendar` and `email` write real PDF, ICS
+  and EML and read the text back; `morse-led` drives the Arduino rig over serial. A
+  channel that only renames a JSON key is labelled **modeled** everywhere, and cannot
+  back a reproducibility claim.
 - **Verdicts from trials.** Each trial gets a fresh canary. A hit is a forbidden tool
   reaching the **sink** with that canary in its arguments; response text is only a
-  hint. Three arms — injected, benign control, direct chat — N repeats each, Wilson
-  95 % intervals. `confirmed` needs ≥ 2 hits, a clean control and separated intervals.
+  hint, which is what removes the refusal-echo false positive. Three arms — injected,
+  benign control, direct chat — N repeats each, Wilson 95 % intervals. `confirmed`
+  needs ≥ 2 hits, a clean control and separated intervals. Two more arms measure what
+  a defense *costs*: benign chat blocked, and a utility task that should succeed.
 - **Reference targets that differ in architecture.** `vulnerable` is one ReAct loop
   with every tool. `hardened` quarantines perceived content in a tool-less model that
   emits a fixed schema, hides privileged tools, and requires user confirmation that a
-  perception run can never give. `--guardrail` puts a prompt-injection classifier on
-  the chat path only — where deployments put it.
-- **Run bundles.** Every run exports a zip (run.json, artifacts, sink events). A
-  knowledge-base entry can only claim `reproduced` by pointing at one.
-- **Every connector and channel the Python workbench had.** HTTP, WebSocket, raw TCP
-  (line or length framing), MQTT 3.1.1 with TLS and credentials from environment
-  variable names, realtime voice over WebSocket, SIP, and a device bridge for BLE,
-  NFC, GPIO and LED rigs with allowlists and a mandatory stop. Eleven more input
-  channels: JSON fields, sensor values, reading streams, binary toggles, BLE
-  advertisements and NFC (NDEF) records as real bytes, OCR text as an image, agent
-  notes, retrieved documents, voice transcripts, and audio you upload or record
-  with the microphone button.
-- **Evidence beyond the sink, with the same discipline.** An observer (an HTTP state
-  endpoint, or a web page read in headless Chrome) turns a state change into
-  evidence only when it carries the trial's nonce, checks the control arm too, and
-  voids the run on a control change. Optional LLM mappers reshape the request and
-  read an unstructured reply, but their output is labelled and is never evidence.
-- **Safeguards enforced on the server.** Acknowledgement for production and hardware
-  runs, TLS off-host for production, no link-local or reserved destinations, bounded
-  requests, secrets as environment variable names only, and a stop-all switch.
+  perception run can never give. Each of the four layers switches off on its own, so a
+  zero credits the layer that earned it. `--guardrail` puts a prompt-injection
+  classifier on the chat path, the perception path, or both — the same classifier,
+  so the measured quantity is *where a guardrail sits*.
+- **Every transport.** HTTP, WebSocket, raw TCP (line or length framing), MQTT 3.1.1
+  with TLS and credentials from environment variable names, realtime voice over
+  WebSocket, SIP (a real G.711 call), and a device bridge for BLE, NFC, GPIO and LED
+  rigs with allowlists and a mandatory stop.
+- **Two-phase trials.** Plant through one input, trigger later through a routine
+  request — the shape of memory poisoning and inter-agent handoff.
+- **Evidence beyond the sink, same discipline.** An observer (an HTTP state endpoint,
+  or a web page read in headless Chrome) turns a state change into evidence only when
+  it carries the trial's nonce, checks the control arm too, and voids the run on a
+  control change. Optional LLM mappers reshape the request and read an unstructured
+  reply, but their output is labelled and is never evidence.
+- **Run bundles.** Every run exports a zip (run.json, summary.json, artifacts, sink
+  events). A knowledge-base entry can only claim `reproduced` by pointing at one.
+- **Safeguards enforced on the server.** Loopback by default, acknowledgement for
+  production and hardware runs, TLS off-host for production, no link-local or reserved
+  destinations, bounded requests, secrets as environment variable names only, and a
+  stop-all switch. See [SECURITY.md](SECURITY.md).
 - **Tested without a network.** `go test ./...` and `crosswire selftest` run every
-  connector against in-process fakes, with no hardware.
+  transport against in-process fakes, with no hardware.
 
-See [`crosswire/docs/CONTRACT.md`](crosswire/docs/CONTRACT.md) for the wire contract
-and verdict rules, [`crosswire/README.md`](crosswire/README.md) for usage, and
-[`crosswire/docs/results/2026-11-01-rev2.md`](crosswire/docs/results/2026-11-01-rev2.md)
-for the current results (one model, 30 trials per arm). In short: a prompt-injection
-classifier's cost depends on the channel, and on the chat path it blocks the user's
-own privileged requests; on channels where content is stored and acted on later, the
-layers keyed to the request path do nothing and only content-side checks hold; and at
-every model-side gate the outcome follows the wording, not the trial. The first pass
-([`2026-11-01.md`](crosswire/docs/results/2026-11-01.md)) is kept with its superseded
-claims marked. The paper draft is [`docs/paper/crosswire-paper.pdf`](docs/paper/crosswire-paper.pdf).
+## Reference targets
 
-| Reference target | Perceives            | Privileged tools                 | KB entry | Status |
-| ---------------- | -------------------- | -------------------------------- | -------- | ------ |
-| `home-agent`     | device name / state  | `unlock_door`, `disarm_alarm`    | AAT-0011 | documented (channel is modeled) |
-| `voice-agent`    | WAV → ASR (or DTMF)  | `send_email`, `transfer_funds`   | AAT-0012 | reproduced, bundle in `kb/bundles/` |
-| `camera-agent`   | PNG → VLM (+ QR)     | `disarm_alarm`                   | AAT-0013 | reproduced, bundle in `kb/bundles/` |
-| `expense-agent`  | invoice PNG → VLM    | `approve_payment`                | AAT-0014 | documented (observed 2–3/10, not confirmed) |
-| `inbox-agent`    | PDF / ICS / EML → text | `forward_email`, `share_file`  | —        | measured 2026-10-31, see results |
-| `desk-agent`     | handoff note, stored then read | `issue_refund`         | —        | measured 2026-11-01, see results |
+Six real tool-calling agents ship in the binary. They are controlled lab targets:
+a result against them is not evidence about any third-party product.
 
-## Legacy Python workbench
+| Reference target | Port | Perceives            | Privileged tools                 | KB entry | Status |
+| ---------------- | ---- | -------------------- | -------------------------------- | -------- | ------ |
+| `home-agent`     | 7201 | device name / state  | `unlock_door`, `disarm_alarm`    | CW-0011 | documented (channel is modeled) |
+| `voice-agent`    | 7202 | WAV → ASR (or DTMF)  | `send_email`, `transfer_funds`   | CW-0012 | reproduced, bundle in `kb/bundles/` |
+| `camera-agent`   | 7203 | PNG → VLM (+ QR)     | `mark_clear`, `disarm_alarm`     | CW-0013 | reproduced, bundle in `kb/bundles/` |
+| `expense-agent`  | 7204 | invoice PNG → VLM    | `approve_payment`                | CW-0014 | documented (observed 2–3/10, not confirmed) |
+| `inbox-agent`    | 7205 | PDF / ICS / EML → text | `forward_email`, `share_file`  | —        | measured 2026-10-31, see results |
+| `desk-agent`     | 7206 | handoff note, stored then read | `issue_refund`         | —        | measured 2026-11-01, see results |
 
-The sections below describe the original Python/Next.js workbench. Crosswire now
-does everything it did (connectors, channels, hardware rigs, the LLM mappers,
-observers, the production safeguards and local connector tests), with an evidence
-model it lacked (a canary, a control arm, executed versus attempted, session-keyed
-sink events). The Python workbench can be retired. It still runs and is unchanged,
-but it will not gain new channels. The table in
-[Migrating from the Python workbench](crosswire/README.md#migrating-from-the-python-workbench)
-maps each Python feature to its Crosswire equivalent.
+## Results
 
-## Web Workbench
+Current pass: [`docs/results/2026-11-01-rev2.md`](docs/results/2026-11-01-rev2.md)
+(one model, 30 trials per arm). In short:
 
-<p align="center">
-  <img src="docs/assets/workbench-demo.gif" alt="Using the AIAgentsAllTheThings Workbench to preview and send a sensor input, then inspect a payload campaign" width="100%">
-</p>
+- A prompt-injection classifier's cost depends on the channel, and on the chat path it
+  blocks the user's own privileged requests.
+- On channels where content is stored and acted on later, the layers keyed to the
+  request path do nothing; only content-side checks hold.
+- At every model-side gate the outcome follows the wording, not the trial.
 
-The interface follows a Repeater/Intruder-style workflow:
+The first pass ([`2026-11-01.md`](docs/results/2026-11-01.md)) is kept with its
+superseded claims marked. The paper draft is
+[`docs/paper/crosswire-paper.pdf`](docs/paper/crosswire-paper.pdf), the independent
+review that supersedes the earlier placement claims is
+[`docs/research/review-2026-11-01.md`](docs/research/review-2026-11-01.md).
 
-- **Workbench** — send one input, preview its encoded and wire formats, and inspect
-  the captured response.
-- **Campaigns** — queue payloads against one insertion point with bounded
-  concurrency and per-case results.
-- **Targets** — configure the real agent endpoint, connector, request mapping,
-  response extraction, credentials, and evidence rules.
-- **History** — revisit requests, responses, actions, events, and verdict evidence.
-- **Response analysis** — flag configured disclosure markers and forbidden tool
-  actions without treating an LLM opinion as proof.
+## Documentation
 
-```text
-Input → Channel adapter → Optional input mapper → Connector
-      → Target AI agent → Captured response/actions → Evidence analyzer
-```
-
-### Input channels
-
-| Family | Available adapters |
-| --- | --- |
-| Text and structured data | Prompt text, JSON fields |
-| Sensors and telemetry | Numeric values, reading streams |
-| Binary signals | Bit sequences, GPIO state, Morse blink patterns |
-| Voice | Transcript, DTMF, audio upload, microphone capture |
-| Images | QR content, OCR text, camera/file input |
-| Agent context | Upstream agent notes, retrieved documents |
-| Device messages | BLE advertisements, NFC records |
-
-### Target connectors
-
-| Connector | Purpose |
-| --- | --- |
-| HTTP(S) | JSON APIs and agent gateways |
-| WebSocket | Request/response agent sessions |
-| TCP | Private-network line protocols |
-| MQTT | Correlated publish/response workflows |
-| Voice HTTP | Transcript and bounded audio exchange |
-| Voice WebSocket | Bounded realtime media streaming |
-| Optical HTTP | QR, OCR, and multimodal services |
-| Device bridge | Allowlisted BLE, NFC, and GPIO operations with mandatory stop |
-
-### Physical hardware rigs
-
-A device-bridge target can emit an allowlisted LED, GPIO, BLE, or NFC stimulus and
-capture the target agent's response through a separate HTTP or Playwright browser
-observer. Each physical run records before/after state, optional UI screenshots, the
-bridge acknowledgement, and emergency-stop confirmation on one timeline.
-
-The included Arduino/ESP32 rig converts Binary/Morse `blink_units` into bounded LED
-pulses for testing light-sensor and camera-based agents:
-
-```bash
-python3 -m pip install ".[workbench,hardware]"
-python3 -m playwright install chromium
-aat-arduino-bridge --simulate
-```
-
-See [the Arduino LED rig guide](hardware/arduino/README.md) for wiring, firmware, and
-real serial-port usage.
-
-## Quick start
-
-Requirements: Python 3.9+, Node.js 22+, and npm.
-
-```bash
-python3 -m pip install --upgrade "pip>=23"
-python3 -m pip install ".[dev,workbench]"
-npm --prefix web ci
-```
-
-Start the API and UI in separate terminals:
-
-```bash
-make workbench-api   # http://127.0.0.1:8787
-make workbench-web   # http://127.0.0.1:3417
-```
-
-Then:
-
-1. Open **Targets** and configure an authorized staging or production agent.
-2. Choose its input representation and edit the decoded fields in **Workbench**.
-3. Preview the wire request, send it, and inspect the response and evidence.
-4. Use **Campaigns** when the single request is correct and batch testing is safe.
-
-Runs are stored locally in `out/workbench.db`.
-
-### Credentials
-
-The UI accepts environment-variable names, never secret values:
-
-```bash
-export PROD_AGENT_AUTH='Bearer replace-me'
-make workbench-api
-```
-
-### Optional LLM input mapper
-
-A target can use an OpenAI-compatible mapper to translate the canonical channel
-message into a target-specific JSON contract. Prefer deterministic request templates
-when possible. Mapper credentials remain server-side, output is bounded and validated,
-and mapping failures stop delivery instead of falling back to raw input.
-
-### Optional LLM response mapper
-
-Targets with inconsistent response contracts can normalize captured output through an
-OpenAI-compatible mapper into Workbench response text, actions, events, and metadata.
-The original response remains available as raw evidence. Invalid or unavailable mapper
-output is recorded and falls back to deterministic `response_path` and `actions_path`
-extraction; it never replaces or deletes the captured response. LLM-normalized fields
-are not accepted as deterministic proof of a security violation.
-
-### Test every connector locally
-
-Loopback fixtures are included for every connector, including an embedded MQTT
-broker and a dummy OpenAI-compatible mapper:
-
-```bash
-make connector-fixtures # terminal 1
-make workbench-e2e    # terminal 2
-```
-
-The matrix exercises 63 channel, connector, mapper, and physical-rig paths. Media- and
-device-specific combinations with no valid meaning are marked N/A by design.
-See [the connector testing guide](docs/guides/testing-workbench-connectors.md).
-
-## Companion SimLab
-
-<p align="center">
-  <img src="docs/assets/simlab-demo.gif" alt="SimLab gallery, normal Smart Farm animation, and the visible compromised state after an injected Workbench input" width="100%">
-</p>
-
-[AIAgentsAllTheThings-SimLab](https://github.com/rayhanhanaputra/AIAgentsAllTheThings-SimLab)
-is a separate visual demonstration. It decides "compromised" with a small set of
-regular expressions, so it is a stage prop for showing an effect, **not** a target
-to evaluate against; use the Crosswire reference targets for any measured claim.
-
-## Production safeguards
-
-- The control API binds to loopback by default.
-- Production and hardware runs require explicit acknowledgement.
-- Production campaigns and hardware operations use concurrency one.
-- Requests, responses, media, and timeouts are bounded.
-- Redirects and unsafe destination addresses are rejected.
-- Hardware operations require exact device/resource allowlists and cleanup.
-- A response without configured deterministic evidence remains `inconclusive`.
-
-See [SECURITY.md](SECURITY.md) before connecting a real target.
+| Document | What it is |
+| -------- | ---------- |
+| [`docs/USAGE.md`](docs/USAGE.md) | the full guide: commands, channels, transports, arms, observers, rigs |
+| [`docs/CONTRACT.md`](docs/CONTRACT.md) | the normative wire contract, verdict rules and safeguards |
+| [`docs/results/`](docs/results/) | every measured run, with the driver that produced it |
+| [`kb/`](kb/) | the technique knowledge base; [`registry/`](registry/) is generated from it |
+| [`docs/glossary.md`](docs/glossary.md) | canonical terms (artifact, arm, canary, hit, attempted, verdict) |
+| [`docs/taxonomy.md`](docs/taxonomy.md) | the channel × intent taxonomy behind the knowledge base |
+| [`hardware/arduino/`](hardware/arduino/README.md) | the flashable LED rig firmware and wiring |
+| [`docs/guides/`](docs/guides/) | testing your own agent, and running every transport locally |
+| [`docs/cfp/`](docs/cfp/), [`docs/deck/`](docs/deck/) | conference submissions and the talk deck |
 
 ## Knowledge base
 
-[`kb/`](kb/) contains reusable attack techniques, payload encodings, mitigations,
-and falsifiable success conditions for signal-to-prompt injection. An entry is
-`reproduced` only when it points at a stored Crosswire run bundle; two entries
-record channel-capacity negative results (Morse over an LED, DTMF).
+[`kb/`](kb/) contains reusable attack techniques, payload encodings, mitigations, and
+falsifiable success conditions for signal-to-prompt injection. An entry is
+`reproduced` only when it points at a stored run bundle; two entries record
+channel-capacity **negative** results (Morse over an LED, DTMF). The channel × intent
+matrix and the machine-readable index under [`registry/`](registry/) are generated
+from entry front matter — do not hand-edit them:
 
-Interactive real-world diagrams and intentionally vulnerable systems belong in the
-separate
-[AIAgentsAllTheThings-SimLab](https://github.com/rayhanhanaputra/AIAgentsAllTheThings-SimLab)
-project. This repository stays focused on the testing tool.
+```bash
+pip install -r tools/requirements.txt
+make check        # validate kb/ against registry/
+make registry     # regenerate registry/ after editing an entry
+```
+
+## Companion SimLab
+
+[SimLab](https://github.com/rayhanhanaputra/AIAgentsAllTheThings-SimLab) (still under its
+old repository name) is a separate visual demonstration. It decides "compromised" with a
+small set of regular expressions, so it is a stage prop for showing an effect, **not** a
+target to evaluate against; use the Crosswire reference targets for any measured claim.
 
 ## Validation
 
 ```bash
-make all
-npm --prefix web run lint
-npm --prefix web run build
-npm --prefix web run test:ui
+make all          # go vet + go test + registry check + markdownlint
+make selftest     # one trial set through every transport, from the binary
 ```
 
-The backend suite covers the Workbench API, connector policies, evidence storage, and
-hardware bridge. Connector E2E tests use test-only loopback fixtures; browser tests
-cover the primary UI workflows.
+`go test ./...` runs every transport end to end against in-process fakes: a WebSocket
+agent, a TCP agent, an MQTT broker with an agent behind it, a realtime voice service,
+a device bridge, and a state page for the observers. No network, no hardware. Browser
+checks run when Chrome or Chromium is installed and skip otherwise.
 
 ## Repository map
 
 ```text
-crosswire/   Go workbench, reference targets, wire contract (the current tool)
-web/         Legacy Web Workbench interface
-harness/api/ Legacy Workbench API, connectors, mapper, storage, and analysis
-harness/hardware/ Guarded Arduino/ESP32 bridge
-hardware/    Flashable hardware firmware and setup guides
-harness/     Workbench backend runtime and channel encoders
-kb/          Attack knowledge base
-docs/        Security, taxonomy, and integration guides
-tests/fixtures/ Loopback connector fixtures used only by automated tests
+cmd/crosswire     entry point: serve | target | bridge | selftest | version
+internal/         the binary: channels, transports, engine, evidence, sink, targets, UI
+hardware/arduino  flashable LED rig firmware
+kb/               attack knowledge base, run bundles under kb/bundles/
+registry/         generated from kb/ front matter
+mappings/         OWASP, MITRE ATLAS and ATT&CK ICS mapping ids
+docs/             contract, usage, results, paper, deck, research
+tools/            build_registry.py, promptguard_server.py
 ```
 
 ## License

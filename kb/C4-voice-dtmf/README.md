@@ -7,7 +7,7 @@ ultrasonic carriers, and ASR homophone or homoglyph confusion.
 
 | registry_id | Technique | Intent | Status |
 | --- | --- | --- | --- |
-| AAT-0002 | [Call-Center Voice Instruction Override](C4-I4-callcenter-voice-override.md) | I4, I1, I2 | reproduced |
+| CW-0002 | [Call-Center Voice Instruction Override](C4-I4-callcenter-voice-override.md) | I4, I1, I2 | reproduced |
 
 Contributions welcome. Copy [`../_template/technique.md`](../_template/technique.md)
 and open a single-file pull request.

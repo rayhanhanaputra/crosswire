@@ -23,8 +23,8 @@ consistent reference.
 
 - **slug** — lowercase, hyphenated, encoding channel and primary intent, for example
   `C2-I3-smartfarm-note-override`. Equals the filename.
-- **registry_id** — `AAT-NNNN`, assigned on merge, never reused, and safe to cite or
-  link from Workbench evidence.
+- **registry_id** — `CW-NNNN`, assigned on merge, never reused, and safe to cite or
+  link from a Crosswire run bundle.
 
 ## References
 

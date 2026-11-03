@@ -1,6 +1,6 @@
 ---
 id:          C6-I2-smarthome-rf-access
-registry_id: AAT-0006
+registry_id: CW-0006
 title:       Smart-Home RF (BLE / NFC) Access Injection
 channel:     C6
 intent:      [I2, I1]
@@ -27,7 +27,7 @@ references:
   - "OWASP, Top 10 for LLM Applications: Prompt Injection (LLM01), https://genai.owasp.org, 2025"
 ---
 
-# Smart-Home RF (BLE / NFC) Access Injection  (AAT-0006 · C6-I2)
+# Smart-Home RF (BLE / NFC) Access Injection  (CW-0006 · C6-I2)
 
 A smart-home agent watches for the owner's presence over Bluetooth Low Energy and reads
 NFC tags at the door. An attacker within radio range broadcasts an advertisement whose

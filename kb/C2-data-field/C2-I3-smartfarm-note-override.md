@@ -1,6 +1,6 @@
 ---
 id:          C2-I3-smartfarm-note-override
-registry_id: AAT-0001
+registry_id: CW-0001
 title:       Smart-Farm Irrigation Note-Field Override
 channel:     C2
 intent:      [I3, I2]
@@ -28,17 +28,14 @@ references:
   - "OWASP, Top 10 for LLM Applications: Excessive Agency (LLM06), https://genai.owasp.org, 2025"
 ---
 
-# Smart-Farm Irrigation Note-Field Override  (AAT-0001 · C2-I3)
+# Smart-Farm Irrigation Note-Field Override  (CW-0001 · C2-I3)
 
 An attacker who can publish telemetry to a smart-farm MQTT topic smuggles an
 operational instruction into a free-text field of an otherwise ordinary sensor
 reading. The irrigation agent treats the field as authoritative context and opens a
 valve far beyond its configured safety limit.
 
-This is the project's flagship technique. The extended rationale, metrics design, and
-component breakdown are in
-[`docs/design/flagship-smart-farm-mqtt.md`](../../docs/design/flagship-smart-farm-mqtt.md).
-This file is the canonical knowledge-base entry.
+This is the project's flagship technique, and this file is its canonical entry.
 
 ## Summary
 
@@ -123,7 +120,7 @@ actuation, I2).
 - Data and instruction separation: never concatenate raw device-provided strings into
   the instruction context; present telemetry as clearly delimited untrusted data.
 - Schema validation and range clamping on numeric fields (defeats the value-injection
-  variant, AAT test B).
+  variant, Crosswire test B).
 - Free-text field handling: strip, ignore, or quarantine fields such as `note`.
 - Out-of-band policy enforcement: enforce the 120-minute and moisture-threshold limits
   in code outside the model, as a hard gate the agent cannot exceed. This is expected

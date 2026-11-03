@@ -1,1 +1,3 @@
+# Dependencies for the repository's research tooling (not the Crosswire binary).
+# tools/build_registry.py: validate kb/ and regenerate registry/
 PyYAML>=6.0

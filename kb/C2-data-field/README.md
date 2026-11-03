@@ -8,8 +8,8 @@ trusted context rather than untrusted observation.
 
 | registry_id | Technique | Intent | Status |
 | --- | --- | --- | --- |
-| AAT-0001 | [Smart-Farm Irrigation Note-Field Override](C2-I3-smartfarm-note-override.md) | I3, I2 | reproduced |
-| AAT-0009 | [Web-App Prompt Injection (running-target)](C2-I4-webapp-prompt-injection.md) | I4, I1 | reproduced |
+| CW-0001 | [Smart-Farm Irrigation Note-Field Override](C2-I3-smartfarm-note-override.md) | I3, I2 | reproduced |
+| CW-0009 | [Web-App Prompt Injection (running-target)](C2-I4-webapp-prompt-injection.md) | I4, I1 | reproduced |
 
 Contributions welcome. Copy [`../_template/technique.md`](../_template/technique.md)
 and open a single-file pull request.

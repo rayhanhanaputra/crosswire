@@ -1,6 +1,6 @@
 ---
 id:          C2-I4-webapp-prompt-injection
-registry_id: AAT-0009
+registry_id: CW-0009
 title:       Web-App Prompt Injection (running-target)
 channel:     C2
 intent:      [I4, I1]
@@ -25,7 +25,7 @@ references:
   - "OWASP, Top 10 for LLM Applications: Prompt Injection (LLM01), https://genai.owasp.org, 2025"
 ---
 
-# Web-App Prompt Injection (running-target)  (AAT-0009 · C2-I4)
+# Web-App Prompt Injection (running-target)  (CW-0009 · C2-I4)
 
 This technique targets a **real running application**—a chatbot, HTTP agent, or socket
 service. The Workbench sends an injection through the configured connector and checks

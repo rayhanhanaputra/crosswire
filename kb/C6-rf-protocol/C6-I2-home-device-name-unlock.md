@@ -1,6 +1,6 @@
 ---
 id:          C6-I2-home-device-name-unlock
-registry_id: AAT-0011
+registry_id: CW-0011
 title:       Device Name as Trusted Context in a Home Assistant
 channel:     C6
 intent:      [I2, I1]
@@ -30,7 +30,7 @@ references:
   - "ESPHome, Text Sensor component, https://esphome.io/components/text_sensor/, 2025"
 ---
 
-# Device Name as Trusted Context in a Home Assistant  (AAT-0011 · C6-I2)
+# Device Name as Trusted Context in a Home Assistant  (CW-0011 · C6-I2)
 
 A home assistant builds its prompt from the entities it controls. The platform
 discovers devices and copies their names and states into that list. Nothing in the

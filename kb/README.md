@@ -1,6 +1,6 @@
 # Knowledge Base
 
-The knowledge base is the reference corpus behind the Web Workbench. It documents
+The knowledge base is the reference corpus behind Crosswire. It documents
 reproducible security techniques, success conditions, detection signals, and defenses
 for AI agents receiving text, structured data, sensor, signal, audio, optical,
 inter-agent, and RF inputs.
@@ -54,14 +54,14 @@ LED and DTMF tones. They exist to show which channels cannot carry an instructio
 ## Reference scenarios
 
 Crosswire ships a real tool-calling LLM target for each of these; see
-`crosswire/docs/CONTRACT.md` §6.
+[`../docs/CONTRACT.md`](../docs/CONTRACT.md) §6.
 
 | Entry    | Target          | Channel adapter | Privileged tool            |
 | -------- | --------------- | --------------- | -------------------------- |
-| AAT-0011 | `home-agent`    | `device-name`   | `unlock_door`, `disarm_alarm` |
-| AAT-0012 | `voice-agent`   | `speech`        | `send_email`, `transfer_funds` |
-| AAT-0013 | `camera-agent`  | `sign`, `qr`    | `mark_clear`, `disarm_alarm` |
-| AAT-0014 | `expense-agent` | `invoice`       | `approve_payment`          |
+| CW-0011 | `home-agent`    | `device-name`   | `unlock_door`, `disarm_alarm` |
+| CW-0012 | `voice-agent`   | `speech`        | `send_email`, `transfer_funds` |
+| CW-0013 | `camera-agent`  | `sign`, `qr`    | `mark_clear`, `disarm_alarm` |
+| CW-0014 | `expense-agent` | `invoice`       | `approve_payment`          |
 
 ## Adding a technique
 
@@ -74,6 +74,6 @@ sections, and open a single-file pull request. An entry without a falsifiable
 Every technique carries two identifiers:
 
 - **slug** — the human-readable filename, for example `C2-I3-smartfarm-note-override`.
-- **registry_id** — a stable, never-reused, citable identifier, for example `AAT-0001`.
+- **registry_id** — a stable, never-reused, citable identifier, for example `CW-0001`.
 
 Slugs may be renamed; the registry_id is permanent and is what the paper cites.
